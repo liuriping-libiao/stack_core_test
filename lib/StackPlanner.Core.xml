@@ -25,6 +25,12 @@
             未配置时返回空数组，由上层决定回退行为。
             </summary>
         </member>
+        <member name="M:StackPlanner.Core.BoxTypeClassifier.GetDefaultMaxSelectableWeightKg">
+            <summary>
+            返回 stackplanner.config 中配置的默认库存选箱最大重量（kg）。
+            未配置时回退为 5kg。
+            </summary>
+        </member>
         <member name="T:StackPlanner.Core.BoxStatus">
             <summary>
             箱子在供包、运输和堆垛流程中的业务状态。
@@ -652,12 +658,12 @@
             <param name="placement">箱子已经实际使用的放置位置。</param>
             <returns>箱子存在且位置合法时返回 true。</returns>
         </member>
-        <member name="M:StackPlanner.Core.StackPlanner.PlanUtilizationFromInventory(System.Double)">
+        <member name="M:StackPlanner.Core.StackPlanner.PlanUtilizationFromInventory(System.Nullable{System.Double})">
             <summary>
             基于库存的利用率规划：先按候选箱型计算最佳策略，由 Core 从库存挑选真实箱号写入当前内存，
             再对选中的真实箱子执行利用率规划，规划结果保存在 Core 内存快照中。
             </summary>
-            <param name="maxSelectableWeightKg">库存选箱允许的最大重量（kg），默认 10kg。</param>
+            <param name="maxSelectableWeightKg">库存选箱允许的最大重量（kg）；为 null 时读取 stackplanner.config 的 maxSelectableWeightKg，未配置时默认 5kg。</param>
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.ResolveInventoryUtilizationDimensions">
             <summary>
@@ -674,7 +680,7 @@
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.SelectInventoryBoxesForUtilization(System.Collections.Generic.IEnumerable{StackPlanner.Core.BoxDimension},System.Double)">
             <summary>
-            按候选箱型计算最佳策略，并从库存挑选真实箱号写入当前内存（仅供 <see cref="M:StackPlanner.Core.StackPlanner.PlanUtilizationFromInventory(System.Double)"/> 内部使用）。
+            按候选箱型计算最佳策略，并从库存挑选真实箱号写入当前内存（仅供 <see cref="M:StackPlanner.Core.StackPlanner.PlanUtilizationFromInventory(System.Nullable{System.Double})"/> 内部使用）。
             </summary>
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.CalculateSucceededBaselineHeight(System.Collections.Generic.IReadOnlyList{StackPlanner.Core.BoxPlacement})">
