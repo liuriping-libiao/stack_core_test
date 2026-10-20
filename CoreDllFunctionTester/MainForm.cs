@@ -22,7 +22,10 @@ public sealed class MainForm : Form
     private readonly Button _upsertSucceededButton = new() { Text = "从本地文件恢复成功堆", AutoSize = true };
     private readonly Button _clearSucceededButton = new() { Text = "清空成功堆垛", AutoSize = true };
     private readonly Button _saveSucceededButton = new() { Text = "保存成功堆到本地文件", AutoSize = true };
+    private readonly Button _savePlanResultButton = new() { Text = "保存规划结果到本地", AutoSize = true };
     private readonly Button _continuePlanButton = new() { Text = "继续利用率规划", AutoSize = true };
+    // 最近一次利用率规划的结果，供“保存规划结果到本地”使用
+    private InventoryUtilizationPlanResult? _lastUtilizationResult;
     private readonly Button _exportBufferedLogsButton = new() { Text = "导出 Core 内存日志", AutoSize = true };
     private readonly Button _openSimulationButton = new() { Text = "仿真", AutoSize = true };
     private SimulationForm? _simulationForm;
@@ -138,7 +141,7 @@ public sealed class MainForm : Form
         var statusPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 13,
+            ColumnCount = 14,
         };
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 220));
@@ -152,6 +155,7 @@ public sealed class MainForm : Form
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90));
+        statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
         var boxNumberLabel = new Label
@@ -179,7 +183,8 @@ public sealed class MainForm : Form
         statusPanel.Controls.Add(_saveSucceededButton, 9, 0);
         statusPanel.Controls.Add(_exportBufferedLogsButton, 10, 0);
         statusPanel.Controls.Add(_openSimulationButton, 11, 0);
-        statusPanel.Controls.Add(_statusResultLabel, 12, 0);
+        statusPanel.Controls.Add(_savePlanResultButton, 12, 0);
+        statusPanel.Controls.Add(_statusResultLabel, 13, 0);
 
         var tabControl = new TabControl { Dock = DockStyle.Fill };
         tabControl.TabPages.Add(CreateTabPage("策略箱型数量", _plannedCountsGrid));
@@ -212,6 +217,7 @@ public sealed class MainForm : Form
         _upsertSucceededButton.Click += (_, _) => UpsertSucceededPlacement();
         _clearSucceededButton.Click += (_, _) => ClearSucceededPlacements();
         _saveSucceededButton.Click += (_, _) => SaveSucceededPlacementsToFile();
+        _savePlanResultButton.Click += (_, _) => SavePlanningResultToFile();
         _continuePlanButton.Click += (_, _) => ContinueUtilizationPlan();
         _exportBufferedLogsButton.Click += (_, _) => ExportBufferedCoreLogs();
         _boxDetailsGrid.SelectionChanged += (_, _) => SyncSelectedBoxNumber();
@@ -296,6 +302,7 @@ public sealed class MainForm : Form
             var records = LoadRackBoxRecords(filePath);
             var upsertResult = _planner.UpsertInventoryBoxes(records, replaceAll: true);
             var utilizationResult = _planner.PlanUtilizationFromInventory();
+            _lastUtilizationResult = utilizationResult;
             var details = _planner.GetPlannerBoxDetails();
 
             BindPlannedCounts(utilizationResult);
@@ -566,6 +573,69 @@ public sealed class MainForm : Form
         }
     }
 
+    /// <summary>
+    /// 将最近一次利用率规划结果、当前规划快照和逐箱明细保存为本地 JSON 文件。
+    /// </summary>
+    private void SavePlanningResultToFile()
+    {
+        try
+        {
+            if (_lastUtilizationResult is null)
+            {
+                MessageBox.Show(this,
+                    "当前没有可保存的规划结果，请先执行利用率规划。",
+                    "无可保存数据",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+
+            var details = _planner.GetPlannerBoxDetails();
+            var payload = new
+            {
+                Operation = "SavePlanningResultToFile",
+                SavedAt = DateTimeOffset.Now,
+                SourceFilePath = _jsonPathTextBox.Text.Trim(),
+                Utilization = _lastUtilizationResult,
+                Plan = _planner.CurrentPlan,
+                Details = details,
+            };
+
+            string exportPath = BuildPlanningResultExportPath();
+            string? directory = Path.GetDirectoryName(exportPath);
+            if (!string.IsNullOrWhiteSpace(directory))
+                Directory.CreateDirectory(directory);
+
+            File.WriteAllText(exportPath, JsonSerializer.Serialize(payload, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                Converters = { new JsonStringEnumConverter() },
+            }));
+
+            _summaryLabel.Text =
+                $"保存规划结果完成 | 已规划箱数: {details.PlannedBoxes}/{details.TotalBoxes} | 文件: {exportPath}";
+            _statusResultLabel.Text = $"保存规划结果完成 -> {exportPath}";
+        }
+        catch (Exception ex)
+        {
+            _statusResultLabel.Text = $"保存规划结果失败：{ex.Message}";
+            _rawJsonTextBox.Text = ex.ToString();
+        }
+    }
+
+    /// <summary>
+    /// 规划结果文件保存在 core_test/planning_results 目录下，文件名带时间戳，避免覆盖历史结果。
+    /// </summary>
+    private string BuildPlanningResultExportPath()
+    {
+        string baseDirectory = Path.GetDirectoryName(_succeededSnapshotPath)
+            ?? AppContext.BaseDirectory;
+        return Path.Combine(
+            baseDirectory,
+            "planning_results",
+            $"planning-result-{DateTime.Now:yyyyMMdd-HHmmss}.json");
+    }
+
     private void ClearSucceededPlacements()
     {
         try
@@ -604,6 +674,7 @@ public sealed class MainForm : Form
         try
         {
             var utilization = _planner.PlanUtilizationFromInventory();
+            _lastUtilizationResult = utilization;
             var details = _planner.GetPlannerBoxDetails();
 
             BindPlannedCounts(utilization);
@@ -844,6 +915,7 @@ public sealed class MainForm : Form
         _upsertSucceededButton.Enabled = !isRunning;
         _clearSucceededButton.Enabled = !isRunning;
         _saveSucceededButton.Enabled = !isRunning;
+        _savePlanResultButton.Enabled = !isRunning;
         _continuePlanButton.Enabled = !isRunning;
         _exportBufferedLogsButton.Enabled = !isRunning;
     }
