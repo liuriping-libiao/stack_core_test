@@ -706,6 +706,12 @@
             仅为利用率规划应用同 TypeId 替换箱的末尾序号。
             </summary>
         </member>
+        <member name="M:StackPlanner.Core.StackPlanner.OrderPlacementsByApproachPriority(System.Collections.Generic.IEnumerable{StackPlanner.Core.BoxPlacement})">
+            <summary>
+            靠近优先顺序：同层按“左上 -> 左下 -> 右上 -> 右下”执行。
+            坐标定义按当前托盘中心划分象限，且左上角定义为 X 最大、Y 最大。
+            </summary>
+        </member>
         <member name="M:StackPlanner.Core.StackPlanner.GenerateCandidates(StackPlanner.Core.Box,System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.PlacedBox})">
             <summary>
             生成一个箱子的候选位置，并按固定规则排序后截断为 MaxCandidatesPerBox 个。
