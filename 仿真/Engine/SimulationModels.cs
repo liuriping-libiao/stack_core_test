@@ -54,6 +54,12 @@ public sealed record SimulationBoxItem
     /// <summary>层号（从 0 开始）。</summary>
     public required int LayerIndex { get; init; }
 
+    /// <summary>同层网格行号（从 1 开始）；未提供时为空。</summary>
+    public int? RowIndex { get; init; }
+
+    /// <summary>同层网格列号（从 1 开始）；未提供时为空。</summary>
+    public int? ColumnIndex { get; init; }
+
     /// <summary>数据源中该箱是否已经是堆垛成功状态。</summary>
     public required bool IsSucceeded { get; init; }
 

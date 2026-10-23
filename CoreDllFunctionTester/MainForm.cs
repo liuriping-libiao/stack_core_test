@@ -303,7 +303,7 @@ public sealed class MainForm : Form
             var upsertResult = _planner.UpsertInventoryBoxes(records, replaceAll: true);
             var utilizationResult = _planner.PlanUtilizationFromInventory();
             _lastUtilizationResult = utilizationResult;
-            var details = _planner.GetPlannerBoxDetails();
+            var details = _planner.GetPlannerBoxDetailsV2();
 
             BindPlannedCounts(utilizationResult);
             BindLayers(utilizationResult);
@@ -350,7 +350,7 @@ public sealed class MainForm : Form
                 return;
             }
 
-            var details = _planner.GetPlannerBoxDetails();
+            var details = _planner.GetPlannerBoxDetailsV2();
             BindBoxDetails(details);
             SyncSelectedBoxNumber();
             _summaryLabel.Text = $"状态更新成功：{boxNumber} -> {status} | 已规划箱数: {details.PlannedBoxes}/{details.TotalBoxes}";
@@ -383,7 +383,7 @@ public sealed class MainForm : Form
         {
             _simulationForm = null;
             // 仿真可能修改了箱子状态，关闭后刷新逐箱明细。
-            BindBoxDetails(_planner.GetPlannerBoxDetails());
+            BindBoxDetails(_planner.GetPlannerBoxDetailsV2());
         };
         _simulationForm.Show(this);
     }
@@ -404,7 +404,7 @@ public sealed class MainForm : Form
                 BoxNumber = boxNumber,
             });
 
-            var details = _planner.GetPlannerBoxDetails();
+            var details = _planner.GetPlannerBoxDetailsV2();
             BindBoxDetails(details);
             SyncSelectedBoxNumber();
 
@@ -449,7 +449,7 @@ public sealed class MainForm : Form
 
             var result = _planner.UpsertSucceededPlacements(records, replaceAll: true);
 
-            var details = _planner.GetPlannerBoxDetails();
+            var details = _planner.GetPlannerBoxDetailsV2();
             BindBoxDetails(details);
             SyncSelectedBoxNumber();
 
@@ -483,7 +483,7 @@ public sealed class MainForm : Form
     {
         try
         {
-            var details = _planner.GetPlannerBoxDetails();
+            var details = _planner.GetPlannerBoxDetailsV2();
             var succeededBoxes = details.Boxes
                 .Where(item => item.Status == BoxStatus.StackingSucceeded)
                 .OrderBy(item => item.Order)
@@ -590,7 +590,7 @@ public sealed class MainForm : Form
                 return;
             }
 
-            var details = _planner.GetPlannerBoxDetails();
+            var details = _planner.GetPlannerBoxDetailsV2();
             var payload = new
             {
                 Operation = "SavePlanningResultToFile",
@@ -641,7 +641,7 @@ public sealed class MainForm : Form
         try
         {
             int cleared = _planner.ClearSucceededPlacements();
-            var details = _planner.GetPlannerBoxDetails();
+            var details = _planner.GetPlannerBoxDetailsV2();
 
             BindBoxDetails(details);
             SyncSelectedBoxNumber();
@@ -675,7 +675,7 @@ public sealed class MainForm : Form
         {
             var utilization = _planner.PlanUtilizationFromInventory();
             _lastUtilizationResult = utilization;
-            var details = _planner.GetPlannerBoxDetails();
+            var details = _planner.GetPlannerBoxDetailsV2();
 
             BindPlannedCounts(utilization);
             BindLayers(utilization);
@@ -711,7 +711,7 @@ public sealed class MainForm : Form
         if (_boxDetailsGrid.CurrentRow?.DataBoundItem is null)
             return;
 
-        string? selected = _boxDetailsGrid.CurrentRow.Cells[nameof(PlannerBoxDetail.BoxNumber)]?.Value?.ToString();
+        string? selected = _boxDetailsGrid.CurrentRow.Cells[nameof(PlannerBoxDetailV2.BoxNumber)]?.Value?.ToString();
         if (!string.IsNullOrWhiteSpace(selected))
             _statusBoxNumberTextBox.Text = selected;
     }
@@ -814,7 +814,7 @@ public sealed class MainForm : Form
         _layersGrid.DataSource = rows;
     }
 
-    private void BindBoxDetails(PlannerBoxDetailResult result)
+    private void BindBoxDetails(PlannerBoxDetailResultV2 result)
     {
         var rows = result.Boxes.Select(item => new
         {
@@ -832,6 +832,8 @@ public sealed class MainForm : Form
             item.Zmm,
             item.OrientationDeg,
             item.LayerIndex,
+            item.RowIndex,
+            item.ColumnIndex,
         }).ToList();
 
         _boxDetailsGrid.DataSource = rows;
@@ -840,7 +842,7 @@ public sealed class MainForm : Form
     private void RenderSummary(
         InventoryUpsertResult upsert,
         InventoryUtilizationPlanResult utilization,
-        PlannerBoxDetailResult details)
+        PlannerBoxDetailResultV2 details)
     {
         _summaryLabel.Text =
             $"入库总数: {upsert.Total} | 无效: {upsert.Invalid} | 规划成功: {utilization.PlanningResult} | 已应用: {utilization.Applied} | 选中箱数: {utilization.SelectedBoxCount} | 利用率: {utilization.Utilization:P2} | 已规划箱数: {details.PlannedBoxes}/{details.TotalBoxes}";
@@ -849,7 +851,7 @@ public sealed class MainForm : Form
     private void RenderRawJson(
         InventoryUpsertResult upsert,
         InventoryUtilizationPlanResult utilization,
-        PlannerBoxDetailResult details)
+        PlannerBoxDetailResultV2 details)
     {
         var payload = new
         {
@@ -866,7 +868,7 @@ public sealed class MainForm : Form
         });
     }
 
-    private void RenderStatusRawJson(string boxNumber, BoxStatus status, PlannerBoxDetailResult details)
+    private void RenderStatusRawJson(string boxNumber, BoxStatus status, PlannerBoxDetailResultV2 details)
     {
         var payload = new
         {
@@ -887,7 +889,7 @@ public sealed class MainForm : Form
     private void RenderMutationRawJson(
         string boxNumber,
         UtilizationMutationResult mutation,
-        PlannerBoxDetailResult details)
+        PlannerBoxDetailResultV2 details)
     {
         var payload = new
         {

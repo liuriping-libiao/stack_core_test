@@ -6,8 +6,8 @@ namespace CoreDllFunctionTester.Simulation.UI;
 /// </summary>
 public sealed class SimulationForm : Form
 {
-    /// <summary>状态列索引，与 InitializeGrid 中的列顺序保持一致。</summary>
-    private const int ColState = 8;
+    /// <summary>状态列名称，与 InitializeGrid 中的列名保持一致。</summary>
+    private const string ColState = "State";
 
     private readonly ISimulationDataSource _dataSource;
     private readonly ISimulationStatusSink _statusSink;
@@ -149,6 +149,8 @@ public sealed class SimulationForm : Form
         _grid.Columns.Add(CreateColumn("重量(kg)", "Weight"));
         _grid.Columns.Add(CreateColumn("朝向", "Orientation"));
         _grid.Columns.Add(CreateColumn("层号", "Layer"));
+        _grid.Columns.Add(CreateColumn("行号", "Row"));
+        _grid.Columns.Add(CreateColumn("列号", "Column"));
         _grid.Columns.Add(CreateColumn("状态", "State"));
     }
 
@@ -204,6 +206,8 @@ public sealed class SimulationForm : Form
                 box.WeightKg,
                 box.OrientationDeg,
                 box.LayerIndex,
+                box.RowIndex,
+                box.ColumnIndex,
                 GetStateText(state));
             _rowIndexByBox[box.BoxNumber] = row;
         }

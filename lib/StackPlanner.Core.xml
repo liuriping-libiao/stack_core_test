@@ -264,6 +264,77 @@
         <member name="P:StackPlanner.Core.PlannerBoxDetailResult.Boxes">
             <summary>逐箱明细。</summary>
         </member>
+        <member name="T:StackPlanner.Core.PlannerBoxDetailV2">
+            <summary>
+            面向 DLL 消费方的逐箱明细视图（V2）。
+            在 V1 字段基础上增加同层网格行列信息。
+            </summary>
+        </member>
+        <member name="P:StackPlanner.Core.PlannerBoxDetailV2.Order">
+            <summary>堆垛顺序；未分配时可能为 -1。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.PlannerBoxDetailV2.BoxNumber">
+            <summary>唯一箱号。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.PlannerBoxDetailV2.TypeId">
+            <summary>箱型类别（TypeId）。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.PlannerBoxDetailV2.LengthMm">
+            <summary>箱子长度，单位为 mm。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.PlannerBoxDetailV2.WidthMm">
+            <summary>箱子宽度，单位为 mm。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.PlannerBoxDetailV2.HeightMm">
+            <summary>箱子高度，单位为 mm。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.PlannerBoxDetailV2.WeightKg">
+            <summary>箱子重量，单位为 kg。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.PlannerBoxDetailV2.Status">
+            <summary>箱子当前业务状态。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.PlannerBoxDetailV2.Planned">
+            <summary>该箱子是否已有当前规划放置点。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.PlannerBoxDetailV2.Xmm">
+            <summary>规划点 X，单位为 mm；未规划时为空。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.PlannerBoxDetailV2.Ymm">
+            <summary>规划点 Y，单位为 mm；未规划时为空。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.PlannerBoxDetailV2.Zmm">
+            <summary>规划点 Z，单位为 mm；未规划时为空。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.PlannerBoxDetailV2.OrientationDeg">
+            <summary>规划方向（0 或 90）；未规划时为空。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.PlannerBoxDetailV2.LayerIndex">
+            <summary>规划层数；未规划时为空。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.PlannerBoxDetailV2.RowIndex">
+            <summary>同层网格行号（从 1 开始）；未规划时为空。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.PlannerBoxDetailV2.ColumnIndex">
+            <summary>同层网格列号（从 1 开始）；未规划时为空。</summary>
+        </member>
+        <member name="T:StackPlanner.Core.PlannerBoxDetailResultV2">
+            <summary>
+            Core 对外提供的逐箱明细结果（V2），包含同层网格行列字段。
+            </summary>
+        </member>
+        <member name="P:StackPlanner.Core.PlannerBoxDetailResultV2.PlanningResult">
+            <summary>当前规划整体是否成功。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.PlannerBoxDetailResultV2.TotalBoxes">
+            <summary>当前箱子总数。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.PlannerBoxDetailResultV2.PlannedBoxes">
+            <summary>当前已有规划放置点的箱子数量。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.PlannerBoxDetailResultV2.Boxes">
+            <summary>逐箱明细（含行列）。</summary>
+        </member>
         <member name="T:StackPlanner.Core.UtilizationMutationResult">
             <summary>利用率规划加减箱操作结果。</summary>
         </member>
@@ -615,6 +686,12 @@
             所有字段均由 Core 输出，供 DLL 消费方直接使用。
             </summary>
         </member>
+        <member name="M:StackPlanner.Core.StackPlanner.GetPlannerBoxDetailsV2(System.Double)">
+            <summary>
+            获取逐箱明细视图（V2），在 V1 基础上增加同层网格行列信息。
+            所有字段均由 Core 输出，供 DLL 消费方直接使用。
+            </summary>
+        </member>
         <member name="M:StackPlanner.Core.StackPlanner.RestoreSnapshot(StackPlanner.Core.PlannerSnapshot)">
             <summary>
             从完整快照恢复 Core 状态。恢复前会校验箱号、箱子属性和规划引用关系。
@@ -708,8 +785,9 @@
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.OrderPlacementsByApproachPriority(System.Collections.Generic.IEnumerable{StackPlanner.Core.BoxPlacement})">
             <summary>
-            靠近优先顺序：同层按“左上 -> 左下 -> 右上 -> 右下”执行。
-            坐标定义按当前托盘中心划分象限，且左上角定义为 X 最大、Y 最大。
+            同层网格顺序：先按列，再按行。
+            行列号采用“投影无遮挡剥离”计算：
+            X+ 方向无遮挡为当前列，Y+ 方向无遮挡为当前行。
             </summary>
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.GenerateCandidates(StackPlanner.Core.Box,System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.PlacedBox})">
@@ -805,6 +883,18 @@
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.SearchState.#ctor(System.Collections.Generic.IReadOnlyList{StackPlanner.Core.Box},System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.PlacedBox},System.Collections.Generic.IReadOnlyDictionary{System.String,StackPlanner.Core.BoxPlacement})">
             <summary>有限宽度搜索的一层布局状态。</summary>
+        </member>
+        <member name="T:StackPlanner.Core.StackPlanner.OrderingFootprint">
+            <summary>同层网格排序使用的二维占用范围。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.OrderingFootprint.#ctor(StackPlanner.Core.BoxPlacement,System.Double,System.Double,System.Double,System.Double)">
+            <summary>同层网格排序使用的二维占用范围。</summary>
+        </member>
+        <member name="T:StackPlanner.Core.StackPlanner.LayerGridRank">
+            <summary>单个箱子的同层网格坐标。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.LayerGridRank.#ctor(System.Int32,System.Int32)">
+            <summary>单个箱子的同层网格坐标。</summary>
         </member>
         <member name="T:StackPlanner.Core.StackPlanner.DirectLayerPlacement">
             <summary>直接二维单层搜索中的一个箱子放置结果。</summary>

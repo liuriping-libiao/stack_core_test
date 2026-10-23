@@ -20,7 +20,7 @@ public sealed class CoreSimulationAdapter : ISimulationDataSource, ISimulationSt
     /// <inheritdoc />
     public SimulationScene LoadScene()
     {
-        var details = _planner.GetPlannerBoxDetails();
+        var details = _planner.GetPlannerBoxDetailsV2();
         var boxes = details.Boxes
             .Where(x => x.Planned
                         && x.Xmm.HasValue
@@ -44,6 +44,8 @@ public sealed class CoreSimulationAdapter : ISimulationDataSource, ISimulationSt
                 BottomZMm = StackPlanner.Core.StackPlanner.PlaceFloorZMm - x.Zmm!.Value - x.HeightMm,
                 OrientationDeg = x.OrientationDeg!.Value,
                 LayerIndex = x.LayerIndex!.Value,
+                RowIndex = x.RowIndex,
+                ColumnIndex = x.ColumnIndex,
                 IsSucceeded = x.Status == BoxStatus.StackingSucceeded,
             })
             .ToList();
