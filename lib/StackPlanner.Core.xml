@@ -31,6 +31,12 @@
             未配置时回退为 5kg。
             </summary>
         </member>
+        <member name="M:StackPlanner.Core.BoxTypeClassifier.GetAllowPalletBoundaryOverrun">
+            <summary>
+            返回 stackplanner.config 中配置的“是否允许超出托盘边界进行利用率规划”。
+            未配置时默认启用。
+            </summary>
+        </member>
         <member name="T:StackPlanner.Core.BoxStatus">
             <summary>
             箱子在供包、运输和堆垛流程中的业务状态。
@@ -591,6 +597,9 @@
         <member name="F:StackPlanner.Core.StackPlanner.EdgeMarginMm">
             <summary>托盘边缘预留距离，单位为 mm。</summary>
         </member>
+        <member name="F:StackPlanner.Core.StackPlanner.PalletBoundaryOverrunMm">
+            <summary>允许超出托盘边界时，四边默认放宽距离，单位为 mm。</summary>
+        </member>
         <member name="F:StackPlanner.Core.StackPlanner.Epsilon">
             <summary>几何比较使用的固定误差，避免浮点边界导致结果不稳定。</summary>
         </member>
@@ -735,6 +744,30 @@
             <param name="placement">箱子已经实际使用的放置位置。</param>
             <returns>箱子存在且位置合法时返回 true。</returns>
         </member>
+        <member name="M:StackPlanner.Core.StackPlanner.PlanBestUtilizationCore(System.Collections.Generic.IEnumerable{StackPlanner.Core.BoxDimension},System.Double,System.Collections.Generic.IReadOnlySet{System.String},System.Double,System.Double)">
+            <summary>
+            在当前托盘边界约束下计算利用率最优策略。
+            utilizationDenominatorAreaMm2 为利用率分母口径（原托盘面积）。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.ExecuteWithPalletBounds``1(System.Double,System.Double,System.Double,System.Double,System.Func{``0})">
+            <summary>
+            在临时托盘边界中执行动作，并在结束后恢复原边界。
+            通过 finally 恢复，避免异常导致边界状态污染。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.ApplyPalletBounds(System.Boolean)">
+            <summary>
+            设置当前生效的托盘边界：超界时为原边界外扩 PalletBoundaryOverrunMm，否则恢复原边界。
+            仅在每次利用率规划完成“原尺寸与超界尺寸”比较后调用，之后的固定位置校验与状态更新沿用同一边界。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.SelectBetterUtilizationPlanWithOptionalOverrun(System.Collections.Generic.IReadOnlyList{StackPlanner.Core.BoxDimension},System.Double,System.Collections.Generic.IReadOnlySet{System.String},System.Double,System.Boolean)">
+            <summary>
+            先后试算常规边界与超界边界，并按“仅利用率优先”规则择优。
+            只有超界方案利用率严格更高时才采用超界；利用率相同或更低均回退常规方案。
+            </summary>
+        </member>
         <member name="M:StackPlanner.Core.StackPlanner.PlanUtilizationFromInventory(System.Nullable{System.Double})">
             <summary>
             基于库存的利用率规划：先按候选箱型计算最佳策略，由 Core 从库存挑选真实箱号写入当前内存，
@@ -777,6 +810,14 @@
             每个真实箱子最多使用一次，输出中的箱号和 Order 与当前集合保持对应。
             二维排布阶段使用箱型类别代表尺寸，而不是单箱原始尺寸。
             </remarks>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.CenterStackWhenOverrun(System.Collections.Generic.List{StackPlanner.Core.BoxPlacement},System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.DirectBoxLayerPlacement})">
+            <summary>
+            超界模式下，将整垛布局的外接矩形中心对齐到托盘原始区域中心，使两侧超出量相等。
+            所有层使用同一个刚性平移量，层内相对位置与支撑关系保持不变；
+            平移量被限制在当前超界边界内，保证居中后仍然合法。
+            非超界模式不做处理。
+            </summary>
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.ApplyPendingUtilizationOrders">
             <summary>
@@ -843,6 +884,18 @@
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.FixedPlacement.#ctor(StackPlanner.Core.BoxPlacement,System.Double,System.Double,System.Double)">
             <summary>已堆垛成功箱子的固定位置和尺寸快照。</summary>
+        </member>
+        <member name="T:StackPlanner.Core.StackPlanner.UtilizationTrialResult">
+            <summary>一次常规/超界试算后的策略结果与边界口径。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.UtilizationTrialResult.#ctor(StackPlanner.Core.UtilizationPlanResult,System.Boolean)">
+            <summary>一次常规/超界试算后的策略结果与边界口径。</summary>
+        </member>
+        <member name="T:StackPlanner.Core.StackPlanner.InventorySelectionResult">
+            <summary>库存选箱输出及后续真实排布应使用的边界口径。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.InventorySelectionResult.#ctor(StackPlanner.Core.InventoryUtilizationPlanResult,System.Boolean)">
+            <summary>库存选箱输出及后续真实排布应使用的边界口径。</summary>
         </member>
         <member name="T:StackPlanner.Core.StackPlanner.SucceededBaselineState">
             <summary>继续规划使用的成功堆垛基线。</summary>
