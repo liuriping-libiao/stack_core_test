@@ -21,6 +21,7 @@ public sealed class MainForm : Form
     private readonly Button _removeAndAddButton = new() { Text = "减箱并补同规格", AutoSize = true };
     private readonly Button _upsertSucceededButton = new() { Text = "从本地文件恢复成功堆", AutoSize = true };
     private readonly Button _clearSucceededButton = new() { Text = "清空成功堆垛", AutoSize = true };
+    private readonly Button _clearInventoryButton = new() { Text = "清空库存", AutoSize = true };
     private readonly Button _saveSucceededButton = new() { Text = "保存成功堆到本地文件", AutoSize = true };
     private readonly Button _savePlanResultButton = new() { Text = "保存规划结果到本地", AutoSize = true };
     private readonly Button _continuePlanButton = new() { Text = "继续利用率规划", AutoSize = true };
@@ -141,12 +142,13 @@ public sealed class MainForm : Form
         var statusPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 14,
+            ColumnCount = 15,
         };
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 220));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 70));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 180));
+        statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
@@ -179,12 +181,13 @@ public sealed class MainForm : Form
         statusPanel.Controls.Add(_removeAndAddButton, 5, 0);
         statusPanel.Controls.Add(_upsertSucceededButton, 6, 0);
         statusPanel.Controls.Add(_clearSucceededButton, 7, 0);
-        statusPanel.Controls.Add(_continuePlanButton, 8, 0);
-        statusPanel.Controls.Add(_saveSucceededButton, 9, 0);
-        statusPanel.Controls.Add(_exportBufferedLogsButton, 10, 0);
-        statusPanel.Controls.Add(_openSimulationButton, 11, 0);
-        statusPanel.Controls.Add(_savePlanResultButton, 12, 0);
-        statusPanel.Controls.Add(_statusResultLabel, 13, 0);
+        statusPanel.Controls.Add(_clearInventoryButton, 8, 0);
+        statusPanel.Controls.Add(_continuePlanButton, 9, 0);
+        statusPanel.Controls.Add(_saveSucceededButton, 10, 0);
+        statusPanel.Controls.Add(_exportBufferedLogsButton, 11, 0);
+        statusPanel.Controls.Add(_openSimulationButton, 12, 0);
+        statusPanel.Controls.Add(_savePlanResultButton, 13, 0);
+        statusPanel.Controls.Add(_statusResultLabel, 14, 0);
 
         var tabControl = new TabControl { Dock = DockStyle.Fill };
         tabControl.TabPages.Add(CreateTabPage("策略箱型数量", _plannedCountsGrid));
@@ -216,6 +219,7 @@ public sealed class MainForm : Form
         _openSimulationButton.Click += (_, _) => OpenSimulationForm();
         _upsertSucceededButton.Click += (_, _) => UpsertSucceededPlacement();
         _clearSucceededButton.Click += (_, _) => ClearSucceededPlacements();
+        _clearInventoryButton.Click += (_, _) => ClearInventory();
         _saveSucceededButton.Click += (_, _) => SaveSucceededPlacementsToFile();
         _savePlanResultButton.Click += (_, _) => SavePlanningResultToFile();
         _continuePlanButton.Click += (_, _) => ContinueUtilizationPlan();
@@ -907,6 +911,41 @@ public sealed class MainForm : Form
         });
     }
 
+    /// <summary>
+    /// 清空 Core 内存中的待堆垛库存（仅清空库存，不影响成功堆垛集合与当前规划）。
+    /// </summary>
+    private void ClearInventory()
+    {
+        var confirm = MessageBox.Show(this,
+            "确定清空 Core 内存中的全部库存箱子吗？\n（不影响成功堆垛集合与当前规划）",
+            "确认清空库存",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Question);
+        if (confirm != DialogResult.Yes)
+            return;
+
+        try
+        {
+            _planner.ClearInventoryBoxes();
+
+            _summaryLabel.Text = "清空库存完成 | 库存已清空";
+            _statusResultLabel.Text = "ClearInventoryBoxes: 库存已清空";
+            _rawJsonTextBox.Text = JsonSerializer.Serialize(new
+            {
+                Operation = "ClearInventoryBoxes",
+                Succeeded = true,
+            }, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            _statusResultLabel.Text = $"清空库存失败：{ex.Message}";
+            _rawJsonTextBox.Text = ex.ToString();
+        }
+    }
+
     private void ToggleRunningState(bool isRunning)
     {
         UseWaitCursor = isRunning;
@@ -916,6 +955,7 @@ public sealed class MainForm : Form
         _removeAndAddButton.Enabled = !isRunning;
         _upsertSucceededButton.Enabled = !isRunning;
         _clearSucceededButton.Enabled = !isRunning;
+        _clearInventoryButton.Enabled = !isRunning;
         _saveSucceededButton.Enabled = !isRunning;
         _savePlanResultButton.Enabled = !isRunning;
         _continuePlanButton.Enabled = !isRunning;
