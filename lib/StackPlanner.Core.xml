@@ -603,6 +603,12 @@
         <member name="F:StackPlanner.Core.StackPlanner.Epsilon">
             <summary>几何比较使用的固定误差，避免浮点边界导致结果不稳定。</summary>
         </member>
+        <member name="F:StackPlanner.Core.StackPlanner.ProjectionIndexMergeThresholdMm">
+            <summary>投影分行/分列时，相邻前沿差小于该值则并入同一行/列，单位为 mm。</summary>
+        </member>
+        <member name="F:StackPlanner.Core.StackPlanner.ApproachClearanceMm">
+            <summary>投影判定附加安全余量。</summary>
+        </member>
         <member name="F:StackPlanner.Core.StackPlanner.BeamWidth">
             <summary>有限宽度搜索每一轮最多保留的布局数量。</summary>
         </member>
@@ -661,6 +667,11 @@
             replaceAll=true 时先清空库存，再写入本次数据。
             </summary>
         </member>
+        <member name="M:StackPlanner.Core.StackPlanner.ClearInventoryBoxes">
+            <summary>
+            清空待堆垛库存数据库（仅清空库存，不影响成功堆垛集合与当前规划）。
+            </summary>
+        </member>
         <member name="M:StackPlanner.Core.StackPlanner.UpsertSucceededPlacements(System.Collections.Generic.IEnumerable{StackPlanner.Core.SucceededPlacementRecord},System.Boolean)">
             <summary>
             批量写入已成功堆垛数据。
@@ -714,12 +725,12 @@
             <param name="box">待增加的箱子，必须处于 OnShelf 状态。</param>
             <returns>增加结果，以及操作后的完整箱子集合和规划快照。</returns>
         </member>
-        <member name="M:StackPlanner.Core.StackPlanner.RemoveAndAddSameSpecBox(StackPlanner.Core.Box)">
+        <member name="M:StackPlanner.Core.StackPlanner.RemoveAndAddSameSpecBox(System.String)">
             <summary>
             不重新规划地删除一个箱子。
             删除后，同 TypeId 箱子依次使用前一个箱子的规划位置，并保留最后释放的位置供加箱复用。
             </summary>
-            <param name="box">待删除的箱子；仅使用其 BoxNumber 定位 Core 内部箱子。</param>
+            <param name="boxNumber">待删除箱子的唯一箱号，用于定位 Core 内部箱子。</param>
             <returns>删除结果，以及操作后的完整箱子集合和规划快照。</returns>
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.UpdateBoxStatus(System.String,StackPlanner.Core.BoxStatus,StackPlanner.Core.BoxPlacement)">
@@ -811,12 +822,12 @@
             二维排布阶段使用箱型类别代表尺寸，而不是单箱原始尺寸。
             </remarks>
         </member>
-        <member name="M:StackPlanner.Core.StackPlanner.CenterStackWhenOverrun(System.Collections.Generic.List{StackPlanner.Core.BoxPlacement},System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.DirectBoxLayerPlacement})">
+        <member name="M:StackPlanner.Core.StackPlanner.CenterStack(System.Collections.Generic.List{StackPlanner.Core.BoxPlacement},System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.DirectBoxLayerPlacement})">
             <summary>
-            超界模式下，将整垛布局的外接矩形中心对齐到托盘原始区域中心，使两侧超出量相等。
+            将整垛布局的外接矩形中心对齐到托盘原始区域中心。
+            超界模式下使两侧超出量相等；非超界模式下使整垛位于托盘中心。
             所有层使用同一个刚性平移量，层内相对位置与支撑关系保持不变；
-            平移量被限制在当前超界边界内，保证居中后仍然合法。
-            非超界模式不做处理。
+            平移量被限制在当前规划边界内，保证居中后仍然合法。
             </summary>
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.ApplyPendingUtilizationOrders">
@@ -830,6 +841,30 @@
             行列号采用“投影无遮挡剥离”计算：
             X+ 方向无遮挡为当前列，Y+ 方向无遮挡为当前行。
             </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.ReorderByApproachFeasibility(System.Collections.Generic.IEnumerable{StackPlanner.Core.BoxPlacement})">
+            <summary>
+            基于两段式进场（先到 x-70,y-70 再到目标点）重排执行顺序。
+            仅在同层内判定干涉，且保持分层顺序不被打乱。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.OrderLayerByProjectionConstraints(System.Int32,System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.OrderingFootprint},System.Collections.Generic.IReadOnlyDictionary{System.String,System.Int32})">
+            <summary>
+            在同层内把“目标先于其右侧/下侧阻挡箱”的投影约束转为偏序，并做拓扑排序。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.HasRightSideInterference(StackPlanner.Core.StackPlanner.OrderingFootprint,System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.OrderingFootprint})">
+            <summary>
+            业务定义“正右方”为 x- 方向：目标箱右侧（x 更小）若已有同层箱体贴近并投影重叠，则视为干涉。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.HasBottomSideInterference(StackPlanner.Core.StackPlanner.OrderingFootprint,System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.OrderingFootprint})">
+            <summary>
+            业务定义“正下方”为 y+ 方向：目标箱下方（y 更大）若已有同层箱体贴近并投影重叠，则视为干涉。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.GetUncoveredSpanMm(System.ValueTuple{System.Double,System.Double},System.Collections.Generic.IEnumerable{System.ValueTuple{System.Double,System.Double}})">
+            <summary>计算投影区间中未被已分配区间覆盖的长度（mm）。</summary>
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.GenerateCandidates(StackPlanner.Core.Box,System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.PlacedBox})">
             <summary>

@@ -403,10 +403,7 @@ public sealed class MainForm : Form
 
         try
         {
-            var mutation = _planner.RemoveAndAddSameSpecBox(new Box
-            {
-                BoxNumber = boxNumber,
-            });
+            var mutation = _planner.RemoveAndAddSameSpecBox(boxNumber);
 
             var details = _planner.GetPlannerBoxDetailsV2();
             BindBoxDetails(details);
