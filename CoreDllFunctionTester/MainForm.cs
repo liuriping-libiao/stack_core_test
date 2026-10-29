@@ -403,20 +403,18 @@ public sealed class MainForm : Form
 
         try
         {
-            var result = _planner.RemoveAndAddSameSpecBox(boxNumber);
+            var mutation = _planner.RemoveAndAddSameSpecBox(boxNumber);
 
             var details = _planner.GetPlannerBoxDetailsV2();
             BindBoxDetails(details);
             SyncSelectedBoxNumber();
 
-            // 增加的箱号为空表示未补箱成功
-            string added = string.IsNullOrEmpty(result.AddedBoxNumber) ? "无" : result.AddedBoxNumber;
             _summaryLabel.Text =
-                $"减箱结果: {(result.RemoveSucceeded ? "成功" : "失败")} | 增加箱号: {added} | {result.Message} | 已规划箱数: {details.PlannedBoxes}/{details.TotalBoxes}";
+                $"减箱补箱结果: {(mutation.Succeeded ? "成功" : "失败")} | {mutation.Message} | 已规划箱数: {details.PlannedBoxes}/{details.TotalBoxes}";
             _statusResultLabel.Text =
-                $"RemoveAndAddSameSpecBox: 减箱{(result.RemoveSucceeded ? "成功" : "失败")}，增加箱号 {added} - {result.Message}";
+                $"RemoveAndAddSameSpecBox: {(mutation.Succeeded ? "成功" : "失败")} - {mutation.Message}";
 
-            RenderMutationRawJson(boxNumber, result, details);
+            RenderMutationRawJson(boxNumber, mutation, details);
         }
         catch (Exception ex)
         {
@@ -891,14 +889,14 @@ public sealed class MainForm : Form
 
     private void RenderMutationRawJson(
         string boxNumber,
-        RemoveAndAddSameSpecResult result,
+        UtilizationMutationResult mutation,
         PlannerBoxDetailResultV2 details)
     {
         var payload = new
         {
             Operation = "RemoveAndAddSameSpecBox",
             BoxNumber = boxNumber,
-            Result = result,
+            Mutation = mutation,
             Plan = _planner.CurrentPlan,
             Details = details,
         };

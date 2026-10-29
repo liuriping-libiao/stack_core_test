@@ -356,18 +356,6 @@
         <member name="P:StackPlanner.Core.UtilizationMutationResult.Plan">
             <summary>操作完成后的规划快照。</summary>
         </member>
-        <member name="T:StackPlanner.Core.RemoveAndAddSameSpecResult">
-            <summary>同规格换箱操作结果（减箱并尝试自动补同规格箱）。</summary>
-        </member>
-        <member name="P:StackPlanner.Core.RemoveAndAddSameSpecResult.RemoveSucceeded">
-            <summary>是否减箱成功。减箱失败时补箱不会执行。</summary>
-        </member>
-        <member name="P:StackPlanner.Core.RemoveAndAddSameSpecResult.AddedBoxNumber">
-            <summary>实际增加的箱子箱号；未增加成功时为空字符串。</summary>
-        </member>
-        <member name="P:StackPlanner.Core.RemoveAndAddSameSpecResult.Message">
-            <summary>Core 返回的操作说明。</summary>
-        </member>
         <member name="T:StackPlanner.Core.BoxDimension">
             <summary>仅由箱体尺寸描述的候选箱型。</summary>
         </member>
@@ -743,12 +731,7 @@
             删除后，同 TypeId 箱子依次使用前一个箱子的规划位置，并保留最后释放的位置供加箱复用。
             </summary>
             <param name="boxNumber">待删除箱子的唯一箱号，用于定位 Core 内部箱子。</param>
-            <returns>减箱是否成功（RemoveSucceeded），以及增加的箱子箱号（AddedBoxNumber，增加不成功时为空字符串）。</returns>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.BuildRemoveAndAddResult(System.Boolean,System.String,System.String)">
-            <summary>
-            构造同规格换箱的返回结果。
-            </summary>
+            <returns>删除结果，以及操作后的完整箱子集合和规划快照。</returns>
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.UpdateBoxStatus(System.String,StackPlanner.Core.BoxStatus,StackPlanner.Core.BoxPlacement)">
             <summary>
