@@ -19,6 +19,7 @@ public sealed class MainForm : Form
     private readonly ComboBox _statusComboBox = new() { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
     private readonly Button _setStatusButton = new() { Text = "设置箱子状态", AutoSize = true };
     private readonly Button _removeAndAddButton = new() { Text = "减箱并补同规格", AutoSize = true };
+    private readonly Button _replaceSameSpecButton = new() { Text = "同规格替换(保序号)", AutoSize = true };
     private readonly Button _upsertSucceededButton = new() { Text = "从本地文件恢复成功堆", AutoSize = true };
     private readonly Button _clearSucceededButton = new() { Text = "清空成功堆垛", AutoSize = true };
     private readonly Button _clearInventoryButton = new() { Text = "清空库存", AutoSize = true };
@@ -142,7 +143,7 @@ public sealed class MainForm : Form
         var statusPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 15,
+            ColumnCount = 16,
         };
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 220));
@@ -157,6 +158,7 @@ public sealed class MainForm : Form
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90));
+        statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 170));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
@@ -187,7 +189,8 @@ public sealed class MainForm : Form
         statusPanel.Controls.Add(_exportBufferedLogsButton, 11, 0);
         statusPanel.Controls.Add(_openSimulationButton, 12, 0);
         statusPanel.Controls.Add(_savePlanResultButton, 13, 0);
-        statusPanel.Controls.Add(_statusResultLabel, 14, 0);
+        statusPanel.Controls.Add(_replaceSameSpecButton, 14, 0);
+        statusPanel.Controls.Add(_statusResultLabel, 15, 0);
 
         var tabControl = new TabControl { Dock = DockStyle.Fill };
         tabControl.TabPages.Add(CreateTabPage("策略箱型数量", _plannedCountsGrid));
@@ -216,6 +219,7 @@ public sealed class MainForm : Form
         _runButton.Click += (_, _) => RunTest();
         _setStatusButton.Click += (_, _) => SetBoxStatus();
         _removeAndAddButton.Click += (_, _) => RemoveAndAddSameSpecBox();
+        _replaceSameSpecButton.Click += (_, _) => ReplaceSameSpecBox();
         _openSimulationButton.Click += (_, _) => OpenSimulationForm();
         _upsertSucceededButton.Click += (_, _) => UpsertSucceededPlacement();
         _clearSucceededButton.Click += (_, _) => ClearSucceededPlacements();
@@ -419,6 +423,39 @@ public sealed class MainForm : Form
         catch (Exception ex)
         {
             _statusResultLabel.Text = $"减箱补箱失败：{ex.Message}";
+            _rawJsonTextBox.Text = ex.ToString();
+        }
+    }
+
+    private void ReplaceSameSpecBox()
+    {
+        string boxNumber = _statusBoxNumberTextBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(boxNumber))
+        {
+            MessageBox.Show(this, "请先输入要减箱的箱号。", "缺少输入", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        try
+        {
+            var result = _planner.ReplaceSameSpecBox(boxNumber);
+
+            var details = _planner.GetPlannerBoxDetailsV2();
+            BindBoxDetails(details);
+            SyncSelectedBoxNumber();
+
+            bool addSucceeded = !string.IsNullOrWhiteSpace(result.AddedBoxNumber);
+            string added = addSucceeded ? result.AddedBoxNumber : "<空>";
+            _summaryLabel.Text =
+                $"同规格替换结果: {(addSucceeded ? "成功" : "失败")} | 可增加箱号: {added} | {result.Message} | 已规划箱数: {details.PlannedBoxes}/{details.TotalBoxes}";
+            _statusResultLabel.Text =
+                $"ReplaceSameSpecBox: {(addSucceeded ? "成功" : "失败")} - 可增加箱号: {added} - {result.Message}";
+
+            RenderReplaceMutationRawJson(boxNumber, result, details);
+        }
+        catch (Exception ex)
+        {
+            _statusResultLabel.Text = $"同规格替换失败：{ex.Message}";
             _rawJsonTextBox.Text = ex.ToString();
         }
     }
@@ -908,6 +945,27 @@ public sealed class MainForm : Form
         });
     }
 
+    private void RenderReplaceMutationRawJson(
+        string boxNumber,
+        ReplaceSameSpecBoxResult result,
+        PlannerBoxDetailResultV2 details)
+    {
+        var payload = new
+        {
+            Operation = "ReplaceSameSpecBox",
+            BoxNumber = boxNumber,
+            Result = result,
+            Plan = _planner.CurrentPlan,
+            Details = details,
+        };
+
+        _rawJsonTextBox.Text = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Converters = { new JsonStringEnumConverter() },
+        });
+    }
+
     /// <summary>
     /// 清空 Core 内存中的待堆垛库存（仅清空库存，不影响成功堆垛集合与当前规划）。
     /// </summary>
@@ -950,6 +1008,7 @@ public sealed class MainForm : Form
         _browseButton.Enabled = !isRunning;
         _setStatusButton.Enabled = !isRunning;
         _removeAndAddButton.Enabled = !isRunning;
+        _replaceSameSpecButton.Enabled = !isRunning;
         _upsertSucceededButton.Enabled = !isRunning;
         _clearSucceededButton.Enabled = !isRunning;
         _clearInventoryButton.Enabled = !isRunning;
