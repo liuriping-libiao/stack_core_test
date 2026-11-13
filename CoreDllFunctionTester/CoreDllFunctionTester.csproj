@@ -7,12 +7,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
-  <!-- 使用拷贝到 core_test/lib 的 StackPlanner.Core.dll，不直接引用 Core 工程 -->
+  <!-- 直接引用本地 Core 工程，便于联调最新接口 -->
   <ItemGroup>
-    <Reference Include="StackPlanner.Core">
-      <HintPath>..\lib\StackPlanner.Core.dll</HintPath>
-      <Private>true</Private>
-    </Reference>
+    <ProjectReference Include="..\..\StackPlanner.Core\StackPlanner.Core.csproj" />
   </ItemGroup>
 
   <!-- Core 运行时需要读取 stackplanner.config，随输出目录一起拷贝 -->

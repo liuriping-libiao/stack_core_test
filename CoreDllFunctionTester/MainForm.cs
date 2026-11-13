@@ -15,6 +15,7 @@ public sealed class MainForm : Form
     private readonly TextBox _jsonPathTextBox = new() { Dock = DockStyle.Fill };
     private readonly Button _browseButton = new() { Text = "选择文件", AutoSize = true };
     private readonly Button _runButton = new() { Text = "导入库存并执行利用率规划", AutoSize = true };
+    private readonly Button _setPalletCornersButton = new() { Text = "托盘尺寸设置", AutoSize = true };
     private readonly TextBox _statusBoxNumberTextBox = new() { Dock = DockStyle.Fill };
     private readonly ComboBox _statusComboBox = new() { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
     private readonly Button _setStatusButton = new() { Text = "设置箱子状态", AutoSize = true };
@@ -23,6 +24,7 @@ public sealed class MainForm : Form
     private readonly Button _upsertSucceededButton = new() { Text = "从本地文件恢复成功堆", AutoSize = true };
     private readonly Button _clearSucceededButton = new() { Text = "清空成功堆垛", AutoSize = true };
     private readonly Button _clearInventoryButton = new() { Text = "清空库存", AutoSize = true };
+    private readonly Button _clearPlanResultButton = new() { Text = "清除规划结果", AutoSize = true };
     private readonly Button _saveSucceededButton = new() { Text = "保存成功堆到本地文件", AutoSize = true };
     private readonly Button _savePlanResultButton = new() { Text = "保存规划结果到本地", AutoSize = true };
     private readonly Button _continuePlanButton = new() { Text = "继续利用率规划", AutoSize = true };
@@ -121,12 +123,13 @@ public sealed class MainForm : Form
         var inputPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 4,
+            ColumnCount = 5,
         };
         inputPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
         inputPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         inputPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110));
         inputPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 240));
+        inputPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
 
         var inputLabel = new Label
         {
@@ -139,16 +142,18 @@ public sealed class MainForm : Form
         inputPanel.Controls.Add(_jsonPathTextBox, 1, 0);
         inputPanel.Controls.Add(_browseButton, 2, 0);
         inputPanel.Controls.Add(_runButton, 3, 0);
+        inputPanel.Controls.Add(_setPalletCornersButton, 4, 0);
 
         var statusPanel = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 16,
+            ColumnCount = 17,
         };
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 220));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 70));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 180));
+        statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
         statusPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
@@ -185,12 +190,13 @@ public sealed class MainForm : Form
         statusPanel.Controls.Add(_clearSucceededButton, 7, 0);
         statusPanel.Controls.Add(_clearInventoryButton, 8, 0);
         statusPanel.Controls.Add(_continuePlanButton, 9, 0);
-        statusPanel.Controls.Add(_saveSucceededButton, 10, 0);
-        statusPanel.Controls.Add(_exportBufferedLogsButton, 11, 0);
-        statusPanel.Controls.Add(_openSimulationButton, 12, 0);
-        statusPanel.Controls.Add(_savePlanResultButton, 13, 0);
-        statusPanel.Controls.Add(_replaceSameSpecButton, 14, 0);
-        statusPanel.Controls.Add(_statusResultLabel, 15, 0);
+        statusPanel.Controls.Add(_clearPlanResultButton, 10, 0);
+        statusPanel.Controls.Add(_saveSucceededButton, 11, 0);
+        statusPanel.Controls.Add(_exportBufferedLogsButton, 12, 0);
+        statusPanel.Controls.Add(_openSimulationButton, 13, 0);
+        statusPanel.Controls.Add(_savePlanResultButton, 14, 0);
+        statusPanel.Controls.Add(_replaceSameSpecButton, 15, 0);
+        statusPanel.Controls.Add(_statusResultLabel, 16, 0);
 
         var tabControl = new TabControl { Dock = DockStyle.Fill };
         tabControl.TabPages.Add(CreateTabPage("策略箱型数量", _plannedCountsGrid));
@@ -217,6 +223,7 @@ public sealed class MainForm : Form
     {
         _browseButton.Click += (_, _) => BrowseRackBoxFile();
         _runButton.Click += (_, _) => RunTest();
+        _setPalletCornersButton.Click += (_, _) => OpenPalletCornersDialog();
         _setStatusButton.Click += (_, _) => SetBoxStatus();
         _removeAndAddButton.Click += (_, _) => RemoveAndAddSameSpecBox();
         _replaceSameSpecButton.Click += (_, _) => ReplaceSameSpecBox();
@@ -224,11 +231,64 @@ public sealed class MainForm : Form
         _upsertSucceededButton.Click += (_, _) => UpsertSucceededPlacement();
         _clearSucceededButton.Click += (_, _) => ClearSucceededPlacements();
         _clearInventoryButton.Click += (_, _) => ClearInventory();
+        _clearPlanResultButton.Click += (_, _) => ClearPlanningResult();
         _saveSucceededButton.Click += (_, _) => SaveSucceededPlacementsToFile();
         _savePlanResultButton.Click += (_, _) => SavePlanningResultToFile();
         _continuePlanButton.Click += (_, _) => ContinueUtilizationPlan();
         _exportBufferedLogsButton.Click += (_, _) => ExportBufferedCoreLogs();
         _boxDetailsGrid.SelectionChanged += (_, _) => SyncSelectedBoxNumber();
+    }
+
+    private void OpenPalletCornersDialog()
+    {
+        var initialCorners = BuildCurrentPalletCorners();
+        using var dialog = new PalletCornersDialog(initialCorners);
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+            return;
+
+        try
+        {
+            var corners = dialog.GetCorners();
+            _planner.SetPalletDimensionsByCorners(corners[0], corners[1], corners[2], corners[3]);
+
+            _summaryLabel.Text =
+                $"托盘尺寸设置成功 | X:[{_planner.PalletXMin:F2},{_planner.PalletXMax:F2}] Y:[{_planner.PalletYMin:F2},{_planner.PalletYMax:F2}] PlaceFloorZ:{_planner.PlaceFloorZ:F2}";
+            _statusResultLabel.Text = "SetPalletDimensionsByCorners: 成功";
+            _rawJsonTextBox.Text = JsonSerializer.Serialize(new
+            {
+                Operation = "SetPalletDimensionsByCorners",
+                Corners = corners,
+                PalletBounds = new
+                {
+                    _planner.PalletXMin,
+                    _planner.PalletXMax,
+                    _planner.PalletYMin,
+                    _planner.PalletYMax,
+                    _planner.PlaceFloorZ,
+                },
+            }, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            _statusResultLabel.Text = $"托盘尺寸设置失败：{ex.Message}";
+            _rawJsonTextBox.Text = ex.ToString();
+            MessageBox.Show(this, ex.Message, "托盘尺寸设置失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+    }
+
+    private PalletCornerPoint[] BuildCurrentPalletCorners()
+    {
+        double z = _planner.PlaceFloorZ;
+        return
+        [
+            new PalletCornerPoint { Xmm = _planner.PalletXMin, Ymm = _planner.PalletYMin, Zmm = z },
+            new PalletCornerPoint { Xmm = _planner.PalletXMax, Ymm = _planner.PalletYMin, Zmm = z },
+            new PalletCornerPoint { Xmm = _planner.PalletXMax, Ymm = _planner.PalletYMax, Zmm = z },
+            new PalletCornerPoint { Xmm = _planner.PalletXMin, Ymm = _planner.PalletYMax, Zmm = z },
+        ];
     }
 
     private void ExportBufferedCoreLogs()
@@ -744,6 +804,53 @@ public sealed class MainForm : Form
         }
     }
 
+    /// <summary>
+    /// 清除当前利用率规划结果，保留成功堆垛基线。
+    /// </summary>
+    private void ClearPlanningResult()
+    {
+        var confirm = MessageBox.Show(this,
+            "确定清除当前利用率规划结果吗？\n（会保留成功堆垛固定落点，不影响库存）",
+            "确认清除规划结果",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Question);
+        if (confirm != DialogResult.Yes)
+            return;
+
+        try
+        {
+            int cleared = _planner.ClearUtilizationPlanResult();
+            _lastUtilizationResult = null;
+
+            var details = _planner.GetPlannerBoxDetailsV2();
+            BindBoxDetails(details);
+            _plannedCountsGrid.DataSource = null;
+            _layersGrid.DataSource = null;
+            SyncSelectedBoxNumber();
+
+            _summaryLabel.Text =
+                $"清除规划结果完成 | 清除落点: {cleared} | 已规划箱数: {details.PlannedBoxes}/{details.TotalBoxes}";
+            _statusResultLabel.Text = $"ClearUtilizationPlanResult: 已清除 {cleared} 个规划落点";
+
+            _rawJsonTextBox.Text = JsonSerializer.Serialize(new
+            {
+                Operation = "ClearUtilizationPlanResult",
+                Cleared = cleared,
+                Plan = _planner.CurrentPlan,
+                Details = details,
+            }, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                Converters = { new JsonStringEnumConverter() },
+            });
+        }
+        catch (Exception ex)
+        {
+            _statusResultLabel.Text = $"清除规划结果失败：{ex.Message}";
+            _rawJsonTextBox.Text = ex.ToString();
+        }
+    }
+
     private void SyncSelectedBoxNumber()
     {
         if (_boxDetailsGrid.CurrentRow?.DataBoundItem is null)
@@ -1006,12 +1113,14 @@ public sealed class MainForm : Form
         UseWaitCursor = isRunning;
         _runButton.Enabled = !isRunning;
         _browseButton.Enabled = !isRunning;
+        _setPalletCornersButton.Enabled = !isRunning;
         _setStatusButton.Enabled = !isRunning;
         _removeAndAddButton.Enabled = !isRunning;
         _replaceSameSpecButton.Enabled = !isRunning;
         _upsertSucceededButton.Enabled = !isRunning;
         _clearSucceededButton.Enabled = !isRunning;
         _clearInventoryButton.Enabled = !isRunning;
+        _clearPlanResultButton.Enabled = !isRunning;
         _saveSucceededButton.Enabled = !isRunning;
         _savePlanResultButton.Enabled = !isRunning;
         _continuePlanButton.Enabled = !isRunning;

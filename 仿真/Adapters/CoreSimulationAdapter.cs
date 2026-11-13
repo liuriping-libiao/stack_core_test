@@ -40,8 +40,8 @@ public sealed class CoreSimulationAdapter : ISimulationDataSource, ISimulationSt
                 WeightKg = x.WeightKg,
                 XMm = x.Xmm!.Value,
                 YMm = x.Ymm!.Value,
-                // Core 的 Zmm = PlaceFloorZMm - 箱底高度 - 箱高，这里反算出箱底高度。
-                BottomZMm = StackPlanner.Core.StackPlanner.PlaceFloorZMm - x.Zmm!.Value - x.HeightMm,
+                // Core 的 Zmm = PlaceFloorZ - 箱底高度 - 箱高，这里反算出箱底高度。
+                BottomZMm = _planner.PlaceFloorZ - x.Zmm!.Value - x.HeightMm,
                 OrientationDeg = x.OrientationDeg!.Value,
                 LayerIndex = x.LayerIndex!.Value,
                 RowIndex = x.RowIndex,
@@ -52,10 +52,10 @@ public sealed class CoreSimulationAdapter : ISimulationDataSource, ISimulationSt
 
         return new SimulationScene
         {
-            PalletXMinMm = StackPlanner.Core.StackPlanner.PalletXMinMm,
-            PalletXMaxMm = StackPlanner.Core.StackPlanner.PalletXMaxMm,
-            PalletYMinMm = StackPlanner.Core.StackPlanner.PalletYMinMm,
-            PalletYMaxMm = StackPlanner.Core.StackPlanner.PalletYMaxMm,
+            PalletXMinMm = _planner.PalletXMin,
+            PalletXMaxMm = _planner.PalletXMax,
+            PalletYMinMm = _planner.PalletYMin,
+            PalletYMaxMm = _planner.PalletYMax,
             StackMaxHeightMm = StackPlanner.Core.StackPlanner.StackMaxHeightMm,
             Boxes = boxes,
         };
@@ -90,7 +90,7 @@ public sealed class CoreSimulationAdapter : ISimulationDataSource, ISimulationSt
             throw new InvalidOperationException($"Core 中不存在箱号 {box.BoxNumber}。");
     }
 
-    private static BoxPlacement ToPlacement(SimulationBoxItem box)
+    private BoxPlacement ToPlacement(SimulationBoxItem box)
     {
         return new BoxPlacement
         {
@@ -98,7 +98,7 @@ public sealed class CoreSimulationAdapter : ISimulationDataSource, ISimulationSt
             BoxNumber = box.BoxNumber,
             Xmm = box.XMm,
             Ymm = box.YMm,
-            Zmm = StackPlanner.Core.StackPlanner.PlaceFloorZMm - box.BottomZMm - box.HeightMm,
+            Zmm = _planner.PlaceFloorZ - box.BottomZMm - box.HeightMm,
             OrientationDeg = box.OrientationDeg,
             LayerIndex = box.LayerIndex,
         };

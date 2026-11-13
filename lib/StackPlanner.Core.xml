@@ -111,6 +111,20 @@
         <member name="P:StackPlanner.Core.PlannerLogEntry.BoxNumber">
             <summary>可选关联箱号。</summary>
         </member>
+        <member name="T:StackPlanner.Core.PalletCornerPoint">
+            <summary>
+            托盘角点三维坐标，单位为 mm。
+            </summary>
+        </member>
+        <member name="P:StackPlanner.Core.PalletCornerPoint.Xmm">
+            <summary>角点 X 坐标，单位为 mm。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.PalletCornerPoint.Ymm">
+            <summary>角点 Y 坐标，单位为 mm。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.PalletCornerPoint.Zmm">
+            <summary>角点 Z 坐标，单位为 mm。</summary>
+        </member>
         <member name="T:StackPlanner.Core.Box">
             <summary>
             独立箱子的输入属性和由 DLL 维护的业务规划状态。
@@ -600,9 +614,6 @@
         <member name="F:StackPlanner.Core.StackPlanner.StackMaxHeightMm">
             <summary>托盘允许的最大堆垛高度，单位为 mm。</summary>
         </member>
-        <member name="F:StackPlanner.Core.StackPlanner.PlaceFloorZMm">
-            <summary>托盘底面对应的机械 Z 基准值，单位为 mm。</summary>
-        </member>
         <member name="F:StackPlanner.Core.StackPlanner.EdgeMarginMm">
             <summary>托盘边缘预留距离，单位为 mm。</summary>
         </member>
@@ -657,6 +668,45 @@
         <member name="M:StackPlanner.Core.StackPlanner.#ctor(System.Double,System.Double,System.Double,System.Double)">
             <summary>
             使用指定托盘边界创建规划器。边界单位为 mm，且必须在首次规划前确定。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.#ctor(System.Double,System.Double,System.Double,System.Double,System.Double)">
+            <summary>
+            使用指定托盘边界和托盘底面机械 Z 基准值创建规划器。
+            </summary>
+        </member>
+        <member name="P:StackPlanner.Core.StackPlanner.PalletXMin">
+            <summary>当前规划器使用的托盘 X 最小边界，单位为 mm。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.StackPlanner.PalletXMax">
+            <summary>当前规划器使用的托盘 X 最大边界，单位为 mm。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.StackPlanner.PalletYMin">
+            <summary>当前规划器使用的托盘 Y 最小边界，单位为 mm。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.StackPlanner.PalletYMax">
+            <summary>当前规划器使用的托盘 Y 最大边界，单位为 mm。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.StackPlanner.PlaceFloorZMm">
+            <summary>当前规划器使用的托盘底面机械 Z 基准值，单位为 mm。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.StackPlanner.PlaceFloorZ">
+            <summary>当前规划器使用的托盘底面机械 Z 基准值，单位为 mm。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.SetPalletDimensions(System.Double,System.Double,System.Double,System.Double)">
+            <summary>
+            设置当前任务的托盘边界。必须在首次成功生成规划前调用。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.SetPalletDimensions(System.Double,System.Double,System.Double,System.Double,System.Double)">
+            <summary>
+            设置当前任务的托盘边界和托盘底面机械 Z 基准值。必须在首次成功生成规划前调用。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.SetPalletDimensionsByCorners(StackPlanner.Core.PalletCornerPoint,StackPlanner.Core.PalletCornerPoint,StackPlanner.Core.PalletCornerPoint,StackPlanner.Core.PalletCornerPoint)">
+            <summary>
+            通过托盘四个角点（3D 坐标）设置托盘参数。
+            X/Y 边界取四角点包围盒；托盘底面机械 Z 基准取四角点 Z 平均值。
             </summary>
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.ConfigureLogging(StackPlanner.Core.PlannerLogOptions)">
@@ -824,7 +874,7 @@
         <member name="M:StackPlanner.Core.StackPlanner.CalculateSucceededBaselineHeight(System.Collections.Generic.IReadOnlyList{StackPlanner.Core.BoxPlacement})">
             <summary>
             计算成功基线占用的堆垛高度（从托盘地面起算的最高点）。
-            与 <see cref="M:StackPlanner.Core.StackPlanner.ToPlacedBox(StackPlanner.Core.Box,StackPlanner.Core.BoxPlacement,System.Boolean)"/> 的 TopZ 口径一致：TopZ = PlaceFloorZMm - Zmm。
+            与 <see cref="M:StackPlanner.Core.StackPlanner.ToPlacedBox(StackPlanner.Core.Box,StackPlanner.Core.BoxPlacement,System.Boolean)"/> 的 TopZ 口径一致：TopZ = PlaceFloorZ - Zmm。
             </summary>
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.GenerateBestUtilizationPlan">
