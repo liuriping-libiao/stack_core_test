@@ -252,7 +252,7 @@ public sealed class MainForm : Form
             _planner.SetPalletDimensionsByCorners(corners[0], corners[1], corners[2], corners[3]);
 
             _summaryLabel.Text =
-                $"托盘尺寸设置成功 | X:[{_planner.PalletXMin:F2},{_planner.PalletXMax:F2}] Y:[{_planner.PalletYMin:F2},{_planner.PalletYMax:F2}] PlaceFloorZ:{_planner.PlaceFloorZ:F2}";
+                $"托盘尺寸设置成功 | X:[{_planner.PalletXMin:F2},{_planner.PalletXMax:F2}] Y:[{_planner.PalletYMin:F2},{_planner.PalletYMax:F2}] PlaceFloorZ:{_planner.PlaceFloorZ:F2} Tilt:{_planner.PalletTiltDeg:F2}°";
             _statusResultLabel.Text = "SetPalletDimensionsByCorners: 成功";
             _rawJsonTextBox.Text = JsonSerializer.Serialize(new
             {
@@ -265,6 +265,7 @@ public sealed class MainForm : Form
                     _planner.PalletYMin,
                     _planner.PalletYMax,
                     _planner.PlaceFloorZ,
+                    _planner.PalletTiltDeg,
                 },
             }, new JsonSerializerOptions
             {

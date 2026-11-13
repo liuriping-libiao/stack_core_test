@@ -172,7 +172,7 @@
         <member name="T:StackPlanner.Core.BoxPlacement">
             <summary>
             单个箱子的堆垛规划结果。
-            坐标为毫米，位置使用箱体中心点，朝向只允许 0° 或 90°。
+            坐标为毫米，位置使用箱体中心点。
             </summary>
         </member>
         <member name="P:StackPlanner.Core.BoxPlacement.Order">
@@ -191,7 +191,7 @@
             <summary>机械执行使用的 Z 坐标，单位为 mm。</summary>
         </member>
         <member name="P:StackPlanner.Core.BoxPlacement.OrientationDeg">
-            <summary>箱子的平面朝向，只能是 0 或 90。</summary>
+            <summary>箱子的平面朝向（度）。启用托盘倾斜输出时，值会在基础 0/90 上叠加托盘倾角。</summary>
         </member>
         <member name="P:StackPlanner.Core.BoxPlacement.LayerIndex">
             <summary>从托盘底面开始计算的层号，底层为 0。</summary>
@@ -262,7 +262,7 @@
             <summary>规划点 Z，单位为 mm；未规划时为空。</summary>
         </member>
         <member name="P:StackPlanner.Core.PlannerBoxDetail.OrientationDeg">
-            <summary>规划方向（0 或 90）；未规划时为空。</summary>
+            <summary>规划方向（度）；未规划时为空。</summary>
         </member>
         <member name="P:StackPlanner.Core.PlannerBoxDetail.LayerIndex">
             <summary>规划层数；未规划时为空。</summary>
@@ -327,7 +327,7 @@
             <summary>规划点 Z，单位为 mm；未规划时为空。</summary>
         </member>
         <member name="P:StackPlanner.Core.PlannerBoxDetailV2.OrientationDeg">
-            <summary>规划方向（0 或 90）；未规划时为空。</summary>
+            <summary>规划方向（度）；未规划时为空。</summary>
         </member>
         <member name="P:StackPlanner.Core.PlannerBoxDetailV2.LayerIndex">
             <summary>规划层数；未规划时为空。</summary>
@@ -614,6 +614,9 @@
         <member name="F:StackPlanner.Core.StackPlanner.StackMaxHeightMm">
             <summary>托盘允许的最大堆垛高度，单位为 mm。</summary>
         </member>
+        <member name="F:StackPlanner.Core.StackPlanner.DefaultPlaceFloorZMm">
+            <summary>托盘底面机械 Z 默认基准值，单位为 mm。</summary>
+        </member>
         <member name="F:StackPlanner.Core.StackPlanner.EdgeMarginMm">
             <summary>托盘边缘预留距离，单位为 mm。</summary>
         </member>
@@ -622,6 +625,9 @@
         </member>
         <member name="F:StackPlanner.Core.StackPlanner.Epsilon">
             <summary>几何比较使用的固定误差，避免浮点边界导致结果不稳定。</summary>
+        </member>
+        <member name="F:StackPlanner.Core.StackPlanner.AngleToleranceDeg">
+            <summary>角度比较容差，单位为度。</summary>
         </member>
         <member name="F:StackPlanner.Core.StackPlanner.ProjectionIndexMergeThresholdMm">
             <summary>投影分行/分列时，相邻前沿差小于该值则并入同一行/列，单位为 mm。</summary>
@@ -670,11 +676,6 @@
             使用指定托盘边界创建规划器。边界单位为 mm，且必须在首次规划前确定。
             </summary>
         </member>
-        <member name="M:StackPlanner.Core.StackPlanner.#ctor(System.Double,System.Double,System.Double,System.Double,System.Double)">
-            <summary>
-            使用指定托盘边界和托盘底面机械 Z 基准值创建规划器。
-            </summary>
-        </member>
         <member name="P:StackPlanner.Core.StackPlanner.PalletXMin">
             <summary>当前规划器使用的托盘 X 最小边界，单位为 mm。</summary>
         </member>
@@ -686,6 +687,9 @@
         </member>
         <member name="P:StackPlanner.Core.StackPlanner.PalletYMax">
             <summary>当前规划器使用的托盘 Y 最大边界，单位为 mm。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.StackPlanner.PalletTiltDeg">
+            <summary>当前托盘相对于世界坐标系的平面倾斜角，单位为度。</summary>
         </member>
         <member name="P:StackPlanner.Core.StackPlanner.PlaceFloorZMm">
             <summary>当前规划器使用的托盘底面机械 Z 基准值，单位为 mm。</summary>
@@ -703,10 +707,17 @@
             设置当前任务的托盘边界和托盘底面机械 Z 基准值。必须在首次成功生成规划前调用。
             </summary>
         </member>
+        <member name="M:StackPlanner.Core.StackPlanner.SetPalletTilt(System.Double)">
+            <summary>
+            设置托盘平面倾斜角（度）。
+            仅影响对外输出的 X/Y 与 OrientationDeg；内部规划仍使用轴对齐坐标。
+            </summary>
+        </member>
         <member name="M:StackPlanner.Core.StackPlanner.SetPalletDimensionsByCorners(StackPlanner.Core.PalletCornerPoint,StackPlanner.Core.PalletCornerPoint,StackPlanner.Core.PalletCornerPoint,StackPlanner.Core.PalletCornerPoint)">
             <summary>
             通过托盘四个角点（3D 坐标）设置托盘参数。
-            X/Y 边界取四角点包围盒；托盘底面机械 Z 基准取四角点 Z 平均值。
+            先按估算倾角将角点旋回到托盘 0 度坐标系，再计算内部 X/Y 边界；
+            托盘底面机械 Z 基准取四角点 Z 平均值。
             </summary>
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.ConfigureLogging(StackPlanner.Core.PlannerLogOptions)">
@@ -744,6 +755,13 @@
             用于“整垛重新规划”前显式丢弃成功基线。
             </summary>
             <returns>本次从 StackingSucceeded 恢复为 OnShelf 的箱子数量。</returns>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.ClearUtilizationPlanResult">
+            <summary>
+            清除当前利用率规划结果，保留成功堆垛基线。
+            清除后，只有 StackingSucceeded 状态箱子的固定落点会继续保留在当前规划中。
+            </summary>
+            <returns>本次被清除的“非成功堆垛”规划落点数量。</returns>
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.ClassifyInventoryBoxTypes(System.Double)">
             <summary>
@@ -976,6 +994,55 @@
             <summary>
             校验成功堆垛集合。实际已发生的成功落点不因超出托盘或间距不足而拒绝写入，
             仅拒绝 Order 重复；几何问题以警告文本返回（message 为空表示无警告）。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.BuildPublicPlan(StackPlanner.Core.StackPlanResult)">
+            <summary>
+            将内部轴对齐规划结果转换为对外结果。
+            仅在输出层叠加托盘倾斜，不改变内部规划坐标系。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.ToPublicPlacement(StackPlanner.Core.BoxPlacement)">
+            <summary>
+            将单个内部放置项映射到对外坐标：
+            1) X/Y 绕托盘中心旋转；2) 朝向角叠加托盘倾角。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.TryToInternalPlacement(StackPlanner.Core.BoxPlacement,StackPlanner.Core.BoxPlacement@)">
+            <summary>
+            将外部（已倾斜）放置项反算回内部坐标。
+            成功堆垛回写前必须先逆变换，避免内部碰撞/边界判断失真。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.TryResolveInternalOrientation(System.Int32,System.Int32@)">
+            <summary>
+            外部角度去除托盘倾角后，必须能映射到内部基准方向（0/90）。
+            允许 ±1° 容差，兼容上位机取整误差。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.NormalizeRectangularOrientationDeg(System.Double)">
+            <summary>
+            矩形箱体朝向按 180 度等价折叠：
+            当 (原朝向 + 托盘倾角) 大于 90 度时，使用反向等价角（减 180 度）。
+            示例：100 -> -80。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.NormalizeAngleDeg(System.Double)">
+            <summary>角度规范化到 [0, 360)。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.NormalizePalletTiltDeg(System.Double)">
+            <summary>
+            将托盘旋转角规范到 [-90, 90]。
+            托盘平面方向具有 180 度等价性，因此超过该区间时折返到等价角。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.RotatePointAround(System.Double,System.Double,System.Double,System.Double,System.Double)">
+            <summary>围绕指定中心点旋转二维坐标。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.EstimatePalletTiltDeg(System.Collections.Generic.IReadOnlyList{StackPlanner.Core.PalletCornerPoint})">
+            <summary>
+            根据四角点估算托盘平面主方向。
+            采用四边中最长边方向作为倾斜角基准，满足最小改动场景。
             </summary>
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.ValidateBox(StackPlanner.Core.Box)">

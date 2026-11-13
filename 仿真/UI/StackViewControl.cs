@@ -167,13 +167,41 @@ public sealed class StackViewControl : Control
 
     /// <summary>托盘四个角点（底面平面坐标）。</summary>
     private static (double X, double Y)[] GetPalletCorners(SimulationScene scene)
-        =>
-        [
+    {
+        var corners = new[]
+        {
             (scene.PalletXMinMm, scene.PalletYMinMm),
             (scene.PalletXMaxMm, scene.PalletYMinMm),
             (scene.PalletXMaxMm, scene.PalletYMaxMm),
             (scene.PalletXMinMm, scene.PalletYMaxMm),
-        ];
+        };
+
+        if (Math.Abs(scene.PalletTiltDeg) <= 0.0001)
+            return corners;
+
+        double centerX = (scene.PalletXMinMm + scene.PalletXMaxMm) / 2;
+        double centerY = (scene.PalletYMinMm + scene.PalletYMaxMm) / 2;
+        return corners
+            .Select(corner => RotatePointAround(corner.Item1, corner.Item2, centerX, centerY, scene.PalletTiltDeg))
+            .ToArray();
+    }
+
+    private static (double X, double Y) RotatePointAround(
+        double x,
+        double y,
+        double centerX,
+        double centerY,
+        double angleDeg)
+    {
+        double radians = angleDeg * Math.PI / 180.0;
+        double cos = Math.Cos(radians);
+        double sin = Math.Sin(radians);
+        double dx = x - centerX;
+        double dy = y - centerY;
+        return (
+            centerX + dx * cos - dy * sin,
+            centerY + dx * sin + dy * cos);
+    }
 
     /// <summary>未缩放、未平移的投影结果，仅用于计算包围盒。</summary>
     private (double X, double Y) RawProject(double x, double y, double z)

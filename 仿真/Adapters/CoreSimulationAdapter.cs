@@ -56,6 +56,7 @@ public sealed class CoreSimulationAdapter : ISimulationDataSource, ISimulationSt
             PalletXMaxMm = _planner.PalletXMax,
             PalletYMinMm = _planner.PalletYMin,
             PalletYMaxMm = _planner.PalletYMax,
+            PalletTiltDeg = _planner.PalletTiltDeg,
             StackMaxHeightMm = StackPlanner.Core.StackPlanner.StackMaxHeightMm,
             Boxes = boxes,
         };

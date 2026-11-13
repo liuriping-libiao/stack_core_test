@@ -87,6 +87,9 @@ public sealed record SimulationScene
     /// <summary>托盘 Y 最大值（mm）。</summary>
     public required double PalletYMaxMm { get; init; }
 
+    /// <summary>托盘平面倾斜角（度），由 Core 输出。</summary>
+    public required double PalletTiltDeg { get; init; }
+
     /// <summary>最大堆垛高度（mm），用于可视化比例。</summary>
     public required double StackMaxHeightMm { get; init; }
 
