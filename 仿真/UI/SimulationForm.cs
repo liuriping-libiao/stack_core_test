@@ -18,6 +18,18 @@ public sealed class SimulationForm : Form
     private readonly Button _pauseButton = new() { Text = "暂停", AutoSize = true, Enabled = false };
     private readonly Button _stopButton = new() { Text = "停止仿真", AutoSize = true, Enabled = false };
     private readonly Button _refreshButton = new() { Text = "刷新数据", AutoSize = true };
+    private readonly Label _viewAngleLabel = new() { Text = "视角旋转(°)", AutoSize = true, Margin = new Padding(12, 8, 0, 0) };
+    private readonly NumericUpDown _viewAngleInput = new()
+    {
+        Width = 80,
+        DecimalPlaces = 1,
+        Minimum = -180,
+        Maximum = 180,
+        Increment = 5,
+        Value = 0,
+        TextAlign = HorizontalAlignment.Right,
+    };
+    private readonly Button _resetViewAngleButton = new() { Text = "角度复位", AutoSize = true };
     private readonly Label _statusLabel = new() { AutoSize = true, Margin = new Padding(12, 8, 0, 0) };
     private readonly SplitContainer _split = new() { Dock = DockStyle.Fill };
     private readonly DataGridView _grid = new() { Dock = DockStyle.Fill };
@@ -109,7 +121,17 @@ public sealed class SimulationForm : Form
             WrapContents = false,
             Padding = new Padding(8, 8, 8, 0),
         };
-        toolPanel.Controls.AddRange(new Control[] { _startButton, _pauseButton, _stopButton, _refreshButton, _statusLabel });
+        toolPanel.Controls.AddRange(new Control[]
+        {
+            _startButton,
+            _pauseButton,
+            _stopButton,
+            _refreshButton,
+            _viewAngleLabel,
+            _viewAngleInput,
+            _resetViewAngleButton,
+            _statusLabel,
+        });
 
         _split.Panel1.Controls.Add(_grid);
         _split.Panel2.Controls.Add(_view);
@@ -165,6 +187,8 @@ public sealed class SimulationForm : Form
         _pauseButton.Click += (_, _) => TogglePause();
         _stopButton.Click += (_, _) => StopSimulation();
         _refreshButton.Click += (_, _) => ReloadScene();
+        _viewAngleInput.ValueChanged += (_, _) => _view.SetViewRotation((double)_viewAngleInput.Value);
+        _resetViewAngleButton.Click += (_, _) => _viewAngleInput.Value = 0;
     }
 
     /// <summary>从数据源重新读取场景，刷新明细表和视图。</summary>

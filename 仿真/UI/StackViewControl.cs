@@ -10,6 +10,7 @@ namespace CoreDllFunctionTester.Simulation.UI;
 public sealed class StackViewControl : Control
 {
     private const double Cos30 = 0.86602540378;
+    private const double BaseViewRotationDeg = 180;
 
     /// <summary>坐标轴原点的 Y 坐标（Core 坐标 Y=0），X 取托盘 X 最小边，即原点为 (PalletXMin, 0, 0)。</summary>
     private const double AxisOriginYMm = 0;
@@ -32,6 +33,7 @@ public sealed class StackViewControl : Control
     private double _centerX;
     private double _centerY;
     private double _scale = 1;
+    private double _viewRotationDeg = BaseViewRotationDeg;
     private PointF _origin;
 
     /// <summary>创建等轴测可视化控件。</summary>
@@ -68,6 +70,14 @@ public sealed class StackViewControl : Control
     public void SetMovingPose(SimulationPose? pose)
     {
         _moving = pose;
+        Invalidate();
+    }
+
+    /// <summary>设置视角旋转角度（度），0 为默认视角，正值逆时针。</summary>
+    public void SetViewRotation(double angleDeg)
+    {
+        _viewRotationDeg = BaseViewRotationDeg + angleDeg;
+        RecalculateLayout();
         Invalidate();
     }
 
@@ -219,12 +229,15 @@ public sealed class StackViewControl : Control
         return new PointF((float)screenX, (float)screenY);
     }
 
-    /// <summary>视角映射：(dx, dy) -> (-dx, -dy)，dx/dy 为相对托盘中心的偏移，即在未旋转基准视角上再逆时针旋转 180°。</summary>
+    /// <summary>视角映射：相对托盘中心偏移 (dx, dy) 旋转后得到 (u, v)。</summary>
     private (double U, double V) RotateView(double x, double y)
     {
         double dx = x - _centerX;
         double dy = y - _centerY;
-        return (-dx, -dy);
+        double radians = _viewRotationDeg * Math.PI / 180.0;
+        double cos = Math.Cos(radians);
+        double sin = Math.Sin(radians);
+        return (dx * cos - dy * sin, dx * sin + dy * cos);
     }
 
     /// <summary>计算视线深度 (u + v) 对世界 X、Y 的梯度符号，梯度为正的一侧朝向观察者。</summary>
@@ -238,13 +251,9 @@ public sealed class StackViewControl : Control
 
     private void DrawPallet(Graphics g, SimulationScene scene)
     {
-        var corners = new[]
-        {
-            Project(scene.PalletXMinMm, scene.PalletYMinMm, 0),
-            Project(scene.PalletXMaxMm, scene.PalletYMinMm, 0),
-            Project(scene.PalletXMaxMm, scene.PalletYMaxMm, 0),
-            Project(scene.PalletXMinMm, scene.PalletYMaxMm, 0),
-        };
+        var corners = GetPalletCorners(scene)
+            .Select(corner => Project(corner.X, corner.Y, 0))
+            .ToArray();
 
         using var fillBrush = new SolidBrush(Color.FromArgb(200, 210, 222));
         using var edgePen = new Pen(Color.FromArgb(90, 105, 125), 1.5f);
@@ -255,22 +264,16 @@ public sealed class StackViewControl : Control
     private void DrawBox(Graphics g, RenderBox item)
     {
         var box = item.Box;
-        double halfX = box.FootprintXMm / 2;
-        double halfY = box.FootprintYMm / 2;
-        double x0 = item.X - halfX;
-        double x1 = item.X + halfX;
-        double y0 = item.Y - halfY;
-        double y1 = item.Y + halfY;
+        var corners = GetBoxFootprintCorners(box, item.X, item.Y);
         double z0 = item.BottomZ;
         double z1 = item.BottomZ + box.HeightMm;
 
         // 只绘制朝向观察者的三个面：顶面，以及由视线方向决定的两个侧面。
         var (gx, gy) = GetViewDepthGradient();
-        double xs = gx < 0 ? x0 : x1;   // 朝向观察者的 X 侧面
-        double ys = gy < 0 ? y0 : y1;   // 朝向观察者的 Y 侧面
-        var topFace = new[] { Project(x0, y0, z1), Project(x1, y0, z1), Project(x1, y1, z1), Project(x0, y1, z1) };
-        var sideXFace = new[] { Project(xs, y0, z0), Project(xs, y1, z0), Project(xs, y1, z1), Project(xs, y0, z1) };
-        var sideYFace = new[] { Project(x0, ys, z0), Project(x1, ys, z0), Project(x1, ys, z1), Project(x0, ys, z1) };
+        var visibleEdges = GetVisibleEdges(corners, gx, gy);
+        var topFace = corners.Select(c => Project(c.X, c.Y, z1)).ToArray();
+        var sideFaceA = BuildSideFace(corners, visibleEdges[0], z0, z1);
+        var sideFaceB = BuildSideFace(corners, visibleEdges[1], z0, z1);
 
         Color baseColor = GetColor(box);
         using var topBrush = new SolidBrush(ControlPaint.Light(baseColor));
@@ -281,11 +284,76 @@ public sealed class StackViewControl : Control
             item.Moving ? 2.5f : 1f);
 
         g.FillPolygon(topBrush, topFace);
-        g.FillPolygon(sideXBrush, sideXFace);
-        g.FillPolygon(sideYBrush, sideYFace);
+        g.FillPolygon(sideXBrush, sideFaceA);
+        g.FillPolygon(sideYBrush, sideFaceB);
         g.DrawPolygon(edgePen, topFace);
-        g.DrawPolygon(edgePen, sideXFace);
-        g.DrawPolygon(edgePen, sideYFace);
+        g.DrawPolygon(edgePen, sideFaceA);
+        g.DrawPolygon(edgePen, sideFaceB);
+    }
+
+    /// <summary>按箱体姿态角计算底面四角点（逆时针）。</summary>
+    private static (double X, double Y)[] GetBoxFootprintCorners(SimulationBoxItem box, double centerX, double centerY)
+    {
+        double halfWidth = box.WidthMm / 2;
+        double halfLength = box.LengthMm / 2;
+        double radians = box.OrientationDeg * Math.PI / 180.0;
+        double cos = Math.Cos(radians);
+        double sin = Math.Sin(radians);
+
+        var localCorners = new[]
+        {
+            (-halfWidth, -halfLength),
+            (halfWidth, -halfLength),
+            (halfWidth, halfLength),
+            (-halfWidth, halfLength),
+        };
+
+        return localCorners
+            .Select(corner =>
+            {
+                double rx = corner.Item1 * cos - corner.Item2 * sin;
+                double ry = corner.Item1 * sin + corner.Item2 * cos;
+                return (centerX + rx, centerY + ry);
+            })
+            .ToArray();
+    }
+
+    /// <summary>从四条边中选择最朝向观察者的两条边。</summary>
+    private static int[] GetVisibleEdges((double X, double Y)[] corners, double gx, double gy)
+    {
+        var scored = new List<(int EdgeIndex, double Score)>(4);
+        for (int i = 0; i < 4; i++)
+        {
+            var a = corners[i];
+            var b = corners[(i + 1) % 4];
+            double dx = b.X - a.X;
+            double dy = b.Y - a.Y;
+            // corners 为逆时针顺序，外法线 = (dy, -dx)
+            double nx = dy;
+            double ny = -dx;
+            double score = nx * gx + ny * gy;
+            scored.Add((i, score));
+        }
+
+        return scored
+            .OrderByDescending(x => x.Score)
+            .Take(2)
+            .Select(x => x.EdgeIndex)
+            .ToArray();
+    }
+
+    /// <summary>由底面边构建对应的侧面四边形。</summary>
+    private PointF[] BuildSideFace((double X, double Y)[] corners, int edgeIndex, double z0, double z1)
+    {
+        var a = corners[edgeIndex];
+        var b = corners[(edgeIndex + 1) % corners.Length];
+        return new[]
+        {
+            Project(a.X, a.Y, z0),
+            Project(b.X, b.Y, z0),
+            Project(b.X, b.Y, z1),
+            Project(a.X, a.Y, z1),
+        };
     }
 
     /// <summary>在 Core 坐标原点 (PalletXMin, 0, 0) 处绘制 X、Y、Z 三个方向的坐标轴。</summary>
