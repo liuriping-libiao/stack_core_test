@@ -262,7 +262,7 @@ public sealed class MainForm : Form
 
             var corners = dialog.GetCorners();
             var frame = BoxPlacementRelocator.BuildFrame(corners);
-            _planner.SetPalletDimensions(frame.LengthMm, frame.WidthMm, frame.FloorZMm);
+            _planner.SetPalletDimensions(frame.LengthMm, frame.WidthMm);
             _palletCorners = corners;
             _palletFrame = frame;
 
