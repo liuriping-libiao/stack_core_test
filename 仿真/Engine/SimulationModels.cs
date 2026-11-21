@@ -45,11 +45,20 @@ public sealed record SimulationBoxItem
     /// <summary>箱中心 Y（mm）。</summary>
     public required double YMm { get; init; }
 
+    /// <summary>重定位前箱中心 X（mm）。</summary>
+    public required double OriginalXMm { get; init; }
+
+    /// <summary>重定位前箱中心 Y（mm）。</summary>
+    public required double OriginalYMm { get; init; }
+
     /// <summary>箱底高度（mm，距托盘底面）。</summary>
     public required double BottomZMm { get; init; }
 
     /// <summary>朝向（0 或 90）。</summary>
     public required int OrientationDeg { get; init; }
+
+    /// <summary>重定位前朝向（0 或 90）。</summary>
+    public required int OriginalOrientationDeg { get; init; }
 
     /// <summary>层号（从 0 开始）。</summary>
     public required int LayerIndex { get; init; }

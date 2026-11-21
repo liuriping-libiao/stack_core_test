@@ -182,16 +182,16 @@
             <summary>该位置对应的唯一箱号。</summary>
         </member>
         <member name="P:StackPlanner.Core.BoxPlacement.Xmm">
-            <summary>箱体中心在托盘坐标系中的 X 坐标，单位为 mm。</summary>
+            <summary>箱体中心相对托盘中心的 X 坐标，单位为 mm。</summary>
         </member>
         <member name="P:StackPlanner.Core.BoxPlacement.Ymm">
-            <summary>箱体中心在托盘坐标系中的 Y 坐标，单位为 mm。</summary>
+            <summary>箱体中心相对托盘中心的 Y 坐标，单位为 mm。</summary>
         </member>
         <member name="P:StackPlanner.Core.BoxPlacement.Zmm">
             <summary>机械执行使用的 Z 坐标，单位为 mm。</summary>
         </member>
         <member name="P:StackPlanner.Core.BoxPlacement.OrientationDeg">
-            <summary>箱子的平面朝向（度）。启用托盘倾斜输出时，值会在基础 0/90 上叠加托盘倾角。</summary>
+            <summary>箱子的平面朝向（度），相对托盘局部坐标系定义。</summary>
         </member>
         <member name="P:StackPlanner.Core.BoxPlacement.LayerIndex">
             <summary>从托盘底面开始计算的层号，底层为 0。</summary>
@@ -596,17 +596,11 @@
             纯堆垛集合和确定性规划器。DLL 内部维护集合、顺序、当前方案和成功箱真实占用。
             </summary>
         </member>
-        <member name="F:StackPlanner.Core.StackPlanner.PalletXMinMm">
-            <summary>托盘可用区域的 X 最小值，单位为 mm。</summary>
+        <member name="F:StackPlanner.Core.StackPlanner.DefaultPalletLengthMm">
+            <summary>默认托盘长度（X 方向），单位为 mm。</summary>
         </member>
-        <member name="F:StackPlanner.Core.StackPlanner.PalletXMaxMm">
-            <summary>托盘可用区域的 X 最大值，单位为 mm。</summary>
-        </member>
-        <member name="F:StackPlanner.Core.StackPlanner.PalletYMinMm">
-            <summary>托盘可用区域的 Y 最小值，单位为 mm。</summary>
-        </member>
-        <member name="F:StackPlanner.Core.StackPlanner.PalletYMaxMm">
-            <summary>托盘可用区域的 Y 最大值，单位为 mm。</summary>
+        <member name="F:StackPlanner.Core.StackPlanner.DefaultPalletWidthMm">
+            <summary>默认托盘宽度（Y 方向），单位为 mm。</summary>
         </member>
         <member name="F:StackPlanner.Core.StackPlanner.StackBoxGapMm">
             <summary>相邻箱子之间的规划间隙，单位为 mm。</summary>
@@ -667,13 +661,13 @@
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.#ctor">
             <summary>
-            使用默认托盘边界创建规划器。
-            托盘边界在实例创建后不可修改，保证一次任务内规划结果的坐标系稳定。
+            使用默认托盘尺寸创建规划器。
+            托盘尺寸在实例创建后可在首次成功规划前修改。
             </summary>
         </member>
-        <member name="M:StackPlanner.Core.StackPlanner.#ctor(System.Double,System.Double,System.Double,System.Double)">
+        <member name="M:StackPlanner.Core.StackPlanner.#ctor(System.Double,System.Double)">
             <summary>
-            使用指定托盘边界创建规划器。边界单位为 mm，且必须在首次规划前确定。
+            使用指定托盘尺寸创建规划器，尺寸单位为 mm。
             </summary>
         </member>
         <member name="P:StackPlanner.Core.StackPlanner.PalletXMin">
@@ -689,7 +683,13 @@
             <summary>当前规划器使用的托盘 Y 最大边界，单位为 mm。</summary>
         </member>
         <member name="P:StackPlanner.Core.StackPlanner.PalletTiltDeg">
-            <summary>当前托盘相对于世界坐标系的平面倾斜角，单位为度。</summary>
+            <summary>兼容字段：当前固定为 0（对外位姿由调用方按托盘点位重定位）。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.StackPlanner.PalletLengthMm">
+            <summary>当前托盘长度（X 方向），单位为 mm。</summary>
+        </member>
+        <member name="P:StackPlanner.Core.StackPlanner.PalletWidthMm">
+            <summary>当前托盘宽度（Y 方向），单位为 mm。</summary>
         </member>
         <member name="P:StackPlanner.Core.StackPlanner.PlaceFloorZMm">
             <summary>当前规划器使用的托盘底面机械 Z 基准值，单位为 mm。</summary>
@@ -697,34 +697,93 @@
         <member name="P:StackPlanner.Core.StackPlanner.PlaceFloorZ">
             <summary>当前规划器使用的托盘底面机械 Z 基准值，单位为 mm。</summary>
         </member>
-        <member name="M:StackPlanner.Core.StackPlanner.SetPalletDimensions(System.Double,System.Double,System.Double,System.Double)">
-            <summary>
-            设置当前任务的托盘边界。必须在首次成功生成规划前调用。
-            </summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.SetPalletDimensions(System.Double,System.Double,System.Double,System.Double,System.Double)">
-            <summary>
-            设置当前任务的托盘边界和托盘底面机械 Z 基准值。必须在首次成功生成规划前调用。
-            </summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.SetPalletTilt(System.Double)">
-            <summary>
-            设置托盘平面倾斜角（度）。
-            仅影响对外输出的 X/Y 与 OrientationDeg；内部规划仍使用轴对齐坐标。
-            </summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.SetPalletDimensionsByCorners(StackPlanner.Core.PalletCornerPoint,StackPlanner.Core.PalletCornerPoint,StackPlanner.Core.PalletCornerPoint,StackPlanner.Core.PalletCornerPoint)">
-            <summary>
-            通过托盘四个角点（3D 坐标）设置托盘参数。
-            先按估算倾角将角点旋回到托盘 0 度坐标系，再计算内部 X/Y 边界；
-            托盘底面机械 Z 基准取四角点 Z 平均值。
-            </summary>
-        </member>
         <member name="M:StackPlanner.Core.StackPlanner.ConfigureLogging(StackPlanner.Core.PlannerLogOptions)">
             <summary>更新日志配置。</summary>
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.GetRecentLogs(System.Int32)">
             <summary>获取最近日志（按时间升序）。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.Fits(StackPlanner.Core.StackPlanner.PlacedBox,System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.PlacedBox})">
+            <summary>检查放置项是否在托盘边界内，并且没有与已有占用发生碰撞。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.InsidePallet(StackPlanner.Core.StackPlanner.Candidate)">
+            <summary>检查候选箱体是否位于当前托盘边界内且高度不超限。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.InsidePallet(StackPlanner.Core.StackPlanner.PlacedBox)">
+            <summary>检查已放置箱体是否位于当前托盘边界内且高度不超限。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.OverlapLength(System.Double,System.Double,System.Double,System.Double)">
+            <summary>计算两个一维区间的重叠长度。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.Round(System.Double)">
+            <summary>统一三位小数舍入，保证输出坐标和比较稳定。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.IsNearAngle(System.Double,System.Double)">
+            <summary>判断角度是否在容差范围内接近目标角。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.NormalizeRectangularOrientationDeg(System.Double)">
+            <summary>
+            矩形箱体朝向按 180 度等价折叠：
+            当 (原朝向 + 托盘倾角) 大于 90 度时，使用反向等价角（减 180 度）。
+            示例：100 -> -80。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.NormalizeAngleDeg(System.Double)">
+            <summary>角度规范化到 [0, 360)。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.NormalizePalletTiltDeg(System.Double)">
+            <summary>
+            将托盘旋转角规范到 [-90, 90]。
+            托盘平面方向具有 180 度等价性，因此超过该区间时折返到等价角。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.RotatePointAround(System.Double,System.Double,System.Double,System.Double,System.Double)">
+            <summary>围绕指定中心点旋转二维坐标。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.EstimatePalletTiltDeg(System.Collections.Generic.IReadOnlyList{StackPlanner.Core.PalletCornerPoint})">
+            <summary>
+            根据四角点估算托盘平面主方向。
+            采用四边中最长边方向作为倾斜角基准，满足最小改动场景。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.TypeCombinations(System.Collections.Generic.IReadOnlyList{System.String},System.Int32)">
+            <summary>枚举字符串箱型键的 1..maxSize 组合。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.BuildTypeCombinations(System.Collections.Generic.IReadOnlyList{System.String},System.Int32,System.Int32,System.Collections.Generic.List{System.String})">
+            <summary>递归构造字符串箱型键的固定长度组合。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.TypeCombinations(System.Collections.Generic.IReadOnlyList{StackPlanner.Core.BoxDimension},System.Int32)">
+            <summary>枚举尺寸集合的 1..maxSize 组合。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.BuildDimensionCombinations(System.Collections.Generic.IReadOnlyList{StackPlanner.Core.BoxDimension},System.Int32,System.Int32,System.Collections.Generic.List{StackPlanner.Core.BoxDimension})">
+            <summary>递归构造尺寸集合的固定长度组合。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.SameSpecTypeId(StackPlanner.Core.Box)">
+            <summary>基于规划尺寸将箱子映射到同规格 TypeId。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.SameSpecTypeId(StackPlanner.Core.InventoryBoxRecord)">
+            <summary>将库存记录映射到规划坐标语义后，再计算同规格 TypeId。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.SameSpecTypeId(System.Double,System.Double,System.Double)">
+            <summary>按三维尺寸分类得到同规格 TypeId。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.BoxTypeKey(StackPlanner.Core.Box)">
+            <summary>为箱子生成与方向无关的尺寸键（长宽排序后拼接）。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.BoxTypeKey(StackPlanner.Core.StackPlanner.PlacedBox)">
+            <summary>为已放置箱体生成与方向无关的尺寸键。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.ValidateBox(StackPlanner.Core.Box)">
+            <summary>校验箱号、尺寸和重量，阻止无效几何进入规划器。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.CloneBox(StackPlanner.Core.Box)">
+            <summary>复制箱子对象，避免外部引用污染内部状态。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.ClonePlacement(StackPlanner.Core.BoxPlacement)">
+            <summary>复制放置结果对象。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.ClonePlan(StackPlanner.Core.StackPlanResult)">
+            <summary>深拷贝规划结果。</summary>
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.GetBoxes">
             <summary>
@@ -818,6 +877,15 @@
             <param name="boxNumber">待减箱箱号。</param>
             <returns>替换结果；AddedBoxNumber 为空字符串表示补箱失败。</returns>
         </member>
+        <member name="M:StackPlanner.Core.StackPlanner.FindInventoryReplacementBox(StackPlanner.Core.Box)">
+            <summary>查找并构造同规格可替换箱对象，找不到时返回 null。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.FindInventoryReplacementRecord(StackPlanner.Core.Box)">
+            <summary>按同规格 TypeId 从库存中选择可替换记录，并排除当前已占用箱号。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.ToReplacementBox(StackPlanner.Core.InventoryBoxRecord)">
+            <summary>将库存记录转换为可加入当前规划的 OnShelf 箱子对象。</summary>
+        </member>
         <member name="M:StackPlanner.Core.StackPlanner.UpdateBoxStatus(System.String,StackPlanner.Core.BoxStatus,StackPlanner.Core.BoxPlacement)">
             <summary>
             更新箱子的业务状态，并在状态变为 StackingSucceeded 时固化其当前规划位置。
@@ -839,86 +907,6 @@
             <param name="boxNumber">箱子的唯一编号。</param>
             <param name="placement">箱子已经实际使用的放置位置。</param>
             <returns>箱子存在且位置合法时返回 true。</returns>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.PlanBestUtilizationCore(System.Collections.Generic.IEnumerable{StackPlanner.Core.BoxDimension},System.Double,System.Collections.Generic.IReadOnlySet{System.String},System.Double,System.Double)">
-            <summary>
-            在当前托盘边界约束下计算利用率最优策略。
-            utilizationDenominatorAreaMm2 为利用率分母口径（原托盘面积）。
-            </summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.ExecuteWithPalletBounds``1(System.Double,System.Double,System.Double,System.Double,System.Func{``0})">
-            <summary>
-            在临时托盘边界中执行动作，并在结束后恢复原边界。
-            通过 finally 恢复，避免异常导致边界状态污染。
-            </summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.ApplyPalletBounds(System.Boolean)">
-            <summary>
-            设置当前生效的托盘边界：超界时为原边界外扩 PalletBoundaryOverrunMm，否则恢复原边界。
-            仅在每次利用率规划完成“原尺寸与超界尺寸”比较后调用，之后的固定位置校验与状态更新沿用同一边界。
-            </summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.SelectBetterUtilizationPlanWithOptionalOverrun(System.Collections.Generic.IReadOnlyList{StackPlanner.Core.BoxDimension},System.Double,System.Collections.Generic.IReadOnlySet{System.String},System.Double,System.Boolean)">
-            <summary>
-            先后试算常规边界与超界边界，并按“仅利用率优先”规则择优。
-            只有超界方案利用率严格更高时才采用超界；利用率相同或更低均回退常规方案。
-            </summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.PlanUtilizationFromInventory(System.Nullable{System.Double})">
-            <summary>
-            基于库存的利用率规划：先按候选箱型计算最佳策略，由 Core 从库存挑选真实箱号写入当前内存，
-            再对选中的真实箱子执行利用率规划，规划结果保存在 Core 内存快照中。
-            </summary>
-            <param name="maxSelectableWeightKg">库存选箱允许的最大重量（kg）；为 null 时读取 stackplanner.config 的 maxSelectableWeightKg，未配置时默认 5kg。</param>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.ResolveInventoryUtilizationDimensions">
-            <summary>
-            解析库存利用率规划使用的候选尺寸：优先使用配置默认值，未配置时回退到全部箱型。
-            </summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.IsSelectableInventoryAssignment(StackPlanner.Core.BoxTypeAssignment,System.Double)">
-            <summary>
-            判断库存箱子是否可用于选箱：箱型有效，且重量在 (0, maxSelectableWeightKg] 内。
-            </summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.CountSelectableInventoryByType(System.Double,System.Collections.Generic.IReadOnlySet{System.String})">
-            <summary>统计库存中各箱型的可选数量（与选箱使用同一筛选条件）。</summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.SelectInventoryBoxesForUtilization(System.Collections.Generic.IEnumerable{StackPlanner.Core.BoxDimension},System.Double)">
-            <summary>
-            按候选箱型计算最佳策略，并从库存挑选真实箱号写入当前内存（仅供 <see cref="M:StackPlanner.Core.StackPlanner.PlanUtilizationFromInventory(System.Nullable{System.Double})"/> 内部使用）。
-            </summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.CalculateSucceededBaselineHeight(System.Collections.Generic.IReadOnlyList{StackPlanner.Core.BoxPlacement})">
-            <summary>
-            计算成功基线占用的堆垛高度（从托盘地面起算的最高点）。
-            与 <see cref="M:StackPlanner.Core.StackPlanner.ToPlacedBox(StackPlanner.Core.Box,StackPlanner.Core.BoxPlacement,System.Boolean)"/> 的 TopZ 口径一致：TopZ = PlaceFloorZ - Zmm。
-            </summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.GenerateBestUtilizationPlan">
-            <summary>
-            使用当前真实箱子集合执行有限数量的二维利用率规划，并直接返回逐箱堆垛数据。
-            本方法复用内部二维利用率策略：同高度分层、最多三种箱型组合和二维候选搜索，
-            不会重新生成箱子数量或箱号。
-            </summary>
-            <remarks>
-            利用率规划面向“当前仍在货架上的箱子集合”。调用方应在规划前完成箱子的增删；
-            每个真实箱子最多使用一次，输出中的箱号和 Order 与当前集合保持对应。
-            二维排布阶段使用箱型类别代表尺寸，而不是单箱原始尺寸。
-            </remarks>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.CenterStack(System.Collections.Generic.List{StackPlanner.Core.BoxPlacement},System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.DirectBoxLayerPlacement})">
-            <summary>
-            将整垛布局的外接矩形中心对齐到托盘原始区域中心。
-            超界模式下使两侧超出量相等；非超界模式下使整垛位于托盘中心。
-            所有层使用同一个刚性平移量，层内相对位置与支撑关系保持不变；
-            平移量被限制在当前规划边界内，保证居中后仍然合法。
-            </summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.ApplyPendingUtilizationOrders">
-            <summary>
-            仅为利用率规划应用同 TypeId 替换箱的末尾序号。
-            </summary>
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.OrderPlacementsByApproachPriority(System.Collections.Generic.IEnumerable{StackPlanner.Core.BoxPlacement})">
             <summary>
@@ -951,102 +939,76 @@
         <member name="M:StackPlanner.Core.StackPlanner.GetUncoveredSpanMm(System.ValueTuple{System.Double,System.Double},System.Collections.Generic.IEnumerable{System.ValueTuple{System.Double,System.Double}})">
             <summary>计算投影区间中未被已分配区间覆盖的长度（mm）。</summary>
         </member>
-        <member name="M:StackPlanner.Core.StackPlanner.GenerateCandidates(StackPlanner.Core.Box,System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.PlacedBox})">
+        <member name="M:StackPlanner.Core.StackPlanner.ValidatePalletDimensions(System.Double,System.Double,System.Double,System.Double)">
+            <summary>校验托盘边界参数合法性（有限值且 max 大于 min）。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.ValidatePalletSize(System.Double,System.Double)">
+            <summary>校验托盘尺寸参数合法性（有限值且大于 0）。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.ValidatePlaceFloorZ(System.Double)">
+            <summary>校验托盘底面机械 Z 基准值合法性。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.SetPalletDimensions(System.Double,System.Double)">
             <summary>
-            生成一个箱子的候选位置，并按固定规则排序后截断为 MaxCandidatesPerBox 个。
+            设置当前任务的托盘尺寸（长和宽）。
+            坐标系以托盘中心为原点，X 方向为长度，Y 方向为宽度。
             </summary>
         </member>
-        <member name="M:StackPlanner.Core.StackPlanner.FindLayerFillSlot(StackPlanner.Core.Box,System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.PlacedBox},System.Int32,System.Double)">
+        <member name="M:StackPlanner.Core.StackPlanner.SetPalletDimensions(System.Double,System.Double,System.Double)">
             <summary>
-            在目标层与目标箱底高度上，按"先低 Y、再低 X"选择第一个合法位置。
-            不受候选截断与支撑面积排序影响，使同型箱沿规则网格紧密排列，避免错位点碎化剩余空位。
+            设置当前任务的托盘尺寸（长和宽）以及托盘底面机械 Z 基准值。
             </summary>
         </member>
-        <member name="M:StackPlanner.Core.StackPlanner.GenerateAllCandidates(StackPlanner.Core.Box,System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.PlacedBox})">
+        <member name="M:StackPlanner.Core.StackPlanner.EnsurePalletSettingsMutable">
+            <summary>确保托盘参数仍可修改：已有规划或成功基线时禁止变更。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.SetPalletBoundsCore(System.Double,System.Double,System.Double,System.Double)">
+            <summary>写入基础托盘边界并刷新当前生效边界与面积缓存。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.ExecuteWithPalletBounds``1(System.Double,System.Double,System.Double,System.Double,System.Func{``0})">
             <summary>
-            生成一个箱子的全部合法候选位置（不截断），并按固定规则排序。
+            在临时托盘边界中执行动作，并在结束后恢复原边界。
+            通过 finally 恢复，避免异常导致边界状态污染。
             </summary>
         </member>
-        <member name="M:StackPlanner.Core.StackPlanner.CandidateHeights(System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.PlacedBox})">
+        <member name="M:StackPlanner.Core.StackPlanner.ApplyPalletBounds(System.Boolean)">
             <summary>
-            返回允许尝试的箱底高度：托盘底面和所有已有箱子的顶部。
-            这样候选箱只能落在托盘或同高支撑面上，不会产生悬空位置。
+            设置当前生效的托盘边界：超界时为原边界外扩 PalletBoundaryOverrunMm，否则恢复原边界。
+            仅在每次利用率规划完成“原尺寸与超界尺寸”比较后调用，之后的固定位置校验与状态更新沿用同一边界。
             </summary>
         </member>
-        <member name="M:StackPlanner.Core.StackPlanner.HasStableSupport(StackPlanner.Core.StackPlanner.Candidate,System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.PlacedBox})">
+        <member name="M:StackPlanner.Core.StackPlanner.BuildPublicPlan(StackPlanner.Core.StackPlanResult)">
             <summary>
-            判断箱子重心是否落在至少一个实际支撑箱的重叠区域内。
-            仅有边角或边缘交集虽然满足几何不碰撞，但在物理仿真中会产生倾倒。
+            将内部轴对齐规划结果转换为对外结果。
+            对外输出统一使用“相对托盘中心”的坐标与角度。
             </summary>
         </member>
-        <member name="M:StackPlanner.Core.StackPlanner.Fits(StackPlanner.Core.StackPlanner.PlacedBox,System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.PlacedBox})">
-            <summary>检查放置项是否在托盘边界内，并且没有与已有占用发生碰撞。</summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.ToPlacedBox(StackPlanner.Core.Box,StackPlanner.Core.BoxPlacement,System.Boolean)">
+        <member name="M:StackPlanner.Core.StackPlanner.ToPublicPlacement(StackPlanner.Core.BoxPlacement)">
             <summary>
-            将公开的机械 Z 坐标反算为内部箱底高度 BaseZ，供边界、碰撞和支撑计算使用。
+            将单个内部放置项映射到对外坐标：
+            1) X/Y 平移到托盘中心相对坐标；2) 朝向角保持托盘局部坐标系（0/90）。
             </summary>
         </member>
-        <member name="M:StackPlanner.Core.StackPlanner.FindBox(System.String)">
-            <summary>按唯一箱号查找内部箱子对象。</summary>
+        <member name="M:StackPlanner.Core.StackPlanner.TryToInternalPlacement(StackPlanner.Core.BoxPlacement,StackPlanner.Core.BoxPlacement@)">
+            <summary>
+            将外部（相对托盘中心）放置项反算回内部坐标。
+            成功堆垛回写前必须先逆变换，避免内部碰撞/边界判断失真。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.TryResolveInternalOrientation(System.Int32,System.Int32@)">
+            <summary>
+            外部角度必须能映射到内部基准方向（0/90）。
+            允许 ±1° 容差，兼容上位机取整误差。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.TryNormalizeSucceededPlacement(StackPlanner.Core.SucceededPlacementRecord,StackPlanner.Core.SucceededPlacementRecord@)">
+            <summary>规范化并校验单条成功堆垛记录，必要时将外部坐标转换为内部坐标。</summary>
         </member>
         <member name="M:StackPlanner.Core.StackPlanner.ValidateSucceededSet(System.Collections.Generic.IEnumerable{StackPlanner.Core.SucceededPlacementRecord},System.String@)">
             <summary>
             校验成功堆垛集合。实际已发生的成功落点不因超出托盘或间距不足而拒绝写入，
             仅拒绝 Order 重复；几何问题以警告文本返回（message 为空表示无警告）。
             </summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.BuildPublicPlan(StackPlanner.Core.StackPlanResult)">
-            <summary>
-            将内部轴对齐规划结果转换为对外结果。
-            仅在输出层叠加托盘倾斜，不改变内部规划坐标系。
-            </summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.ToPublicPlacement(StackPlanner.Core.BoxPlacement)">
-            <summary>
-            将单个内部放置项映射到对外坐标：
-            1) X/Y 绕托盘中心旋转；2) 朝向角叠加托盘倾角。
-            </summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.TryToInternalPlacement(StackPlanner.Core.BoxPlacement,StackPlanner.Core.BoxPlacement@)">
-            <summary>
-            将外部（已倾斜）放置项反算回内部坐标。
-            成功堆垛回写前必须先逆变换，避免内部碰撞/边界判断失真。
-            </summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.TryResolveInternalOrientation(System.Int32,System.Int32@)">
-            <summary>
-            外部角度去除托盘倾角后，必须能映射到内部基准方向（0/90）。
-            允许 ±1° 容差，兼容上位机取整误差。
-            </summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.NormalizeRectangularOrientationDeg(System.Double)">
-            <summary>
-            矩形箱体朝向按 180 度等价折叠：
-            当 (原朝向 + 托盘倾角) 大于 90 度时，使用反向等价角（减 180 度）。
-            示例：100 -> -80。
-            </summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.NormalizeAngleDeg(System.Double)">
-            <summary>角度规范化到 [0, 360)。</summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.NormalizePalletTiltDeg(System.Double)">
-            <summary>
-            将托盘旋转角规范到 [-90, 90]。
-            托盘平面方向具有 180 度等价性，因此超过该区间时折返到等价角。
-            </summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.RotatePointAround(System.Double,System.Double,System.Double,System.Double,System.Double)">
-            <summary>围绕指定中心点旋转二维坐标。</summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.EstimatePalletTiltDeg(System.Collections.Generic.IReadOnlyList{StackPlanner.Core.PalletCornerPoint})">
-            <summary>
-            根据四角点估算托盘平面主方向。
-            采用四边中最长边方向作为倾斜角基准，满足最小改动场景。
-            </summary>
-        </member>
-        <member name="M:StackPlanner.Core.StackPlanner.ValidateBox(StackPlanner.Core.Box)">
-            <summary>校验箱号、尺寸和重量，阻止无效几何进入规划器。</summary>
         </member>
         <member name="T:StackPlanner.Core.StackPlanner.FixedPlacement">
             <summary>已堆垛成功箱子的固定位置和尺寸快照。</summary>
@@ -1166,10 +1128,164 @@
         <member name="M:StackPlanner.Core.StackPlanner.DirectStackResult.#ctor(System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.DirectLayerResult},System.Double,System.Int32,System.String)">
             <summary>不同高度单层方案组合后的整垛结果。</summary>
         </member>
+        <member name="M:StackPlanner.Core.StackPlanner.PlanBestUtilizationCore(System.Collections.Generic.IEnumerable{StackPlanner.Core.BoxDimension},System.Double,System.Collections.Generic.IReadOnlySet{System.String},System.Double,System.Double)">
+            <summary>
+            在当前托盘边界约束下计算利用率最优策略。
+            utilizationDenominatorAreaMm2 为利用率分母口径（原托盘面积）。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.SelectBetterUtilizationPlanWithOptionalOverrun(System.Collections.Generic.IReadOnlyList{StackPlanner.Core.BoxDimension},System.Double,System.Collections.Generic.IReadOnlySet{System.String},System.Double,System.Boolean)">
+            <summary>
+            先后试算常规边界与超界边界，并按“仅利用率优先”规则择优。
+            只有超界方案利用率严格更高时才采用超界；利用率相同或更低均回退常规方案。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.PlanUtilizationFromInventory(System.Nullable{System.Double})">
+            <summary>
+            基于库存的利用率规划：先按候选箱型计算最佳策略，由 Core 从库存挑选真实箱号写入当前内存，
+            再对选中的真实箱子执行利用率规划，规划结果保存在 Core 内存快照中。
+            </summary>
+            <param name="maxSelectableWeightKg">库存选箱允许的最大重量（kg）；为 null 时读取 stackplanner.config 的 maxSelectableWeightKg，未配置时默认 5kg。</param>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.ResolveInventoryUtilizationDimensions">
+            <summary>
+            解析库存利用率规划使用的候选尺寸：优先使用配置默认值，未配置时回退到全部箱型。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.IsSelectableInventoryAssignment(StackPlanner.Core.BoxTypeAssignment,System.Double)">
+            <summary>
+            判断库存箱子是否可用于选箱：箱型有效，且重量在 (0, maxSelectableWeightKg] 内。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.CountSelectableInventoryByType(System.Double,System.Collections.Generic.IReadOnlySet{System.String})">
+            <summary>统计库存中各箱型的可选数量（与选箱使用同一筛选条件）。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.ReduceMinimumCountsBySucceeded(System.Collections.Generic.IEnumerable{StackPlanner.Core.BoxDimension},System.Collections.Generic.IReadOnlyList{StackPlanner.Core.Box})">
+            <summary>
+            按已成功堆垛的箱子数量扣减候选尺寸的最小需求数，避免对已满足的箱型重复选箱。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.TryBuildSucceededLayerFillPlan(StackPlanner.Core.StackPlanner.SucceededBaselineState,StackPlanner.Core.StackPlanner.SucceededLayerFillPlan@,System.String@)">
+            <summary>
+            基于成功基线推导“同层同型补齐”计划：识别目标箱型并计算还需要补齐的数量。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.ExcludeCandidateDimension(System.Collections.Generic.IReadOnlyList{StackPlanner.Core.BoxDimension},StackPlanner.Core.BoxDimension)">
+            <summary>
+            从候选尺寸集中剔除指定尺寸，用于成功层补齐后避免同箱型重复进入后续策略规划。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.SelectInventoryBoxesForUtilization(System.Collections.Generic.IEnumerable{StackPlanner.Core.BoxDimension},System.Double)">
+            <summary>
+            按候选箱型计算最佳策略，并从库存挑选真实箱号写入当前内存（仅供 <see cref="M:StackPlanner.Core.StackPlanner.PlanUtilizationFromInventory(System.Nullable{System.Double})"/> 内部使用）。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.CalculateSucceededBaselineHeight(System.Collections.Generic.IReadOnlyList{StackPlanner.Core.BoxPlacement})">
+            <summary>
+            计算成功基线占用的堆垛高度（从托盘地面起算的最高点）。
+            与 <see cref="M:StackPlanner.Core.StackPlanner.ToPlacedBox(StackPlanner.Core.Box,StackPlanner.Core.BoxPlacement,System.Boolean)"/> 的 TopZ 口径一致：TopZ = PlaceFloorZ - Zmm。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.TryBuildSucceededBaseline(StackPlanner.Core.StackPlanner.SucceededBaselineState@,System.String@)">
+            <summary>
+            从当前内存中提取成功堆垛箱及其固定落点，构建后续利用率选箱的成功基线快照。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.GenerateBestUtilizationPlan">
+            <summary>
+            使用当前真实箱子集合执行有限数量的二维利用率规划，并直接返回逐箱堆垛数据。
+            本方法复用内部二维利用率策略：同高度分层、最多三种箱型组合和二维候选搜索，
+            不会重新生成箱子数量或箱号。
+            </summary>
+            <remarks>
+            利用率规划面向“当前仍在货架上的箱子集合”。调用方应在规划前完成箱子的增删；
+            每个真实箱子最多使用一次，输出中的箱号和 Order 与当前集合保持对应。
+            二维排布阶段使用箱型类别代表尺寸，而不是单箱原始尺寸。
+            </remarks>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.CenterStack(System.Collections.Generic.List{StackPlanner.Core.BoxPlacement},System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.DirectBoxLayerPlacement})">
+            <summary>
+            将整垛布局的外接矩形中心对齐到托盘原始区域中心。
+            超界模式下使两侧超出量相等；非超界模式下使整垛位于托盘中心。
+            所有层使用同一个刚性平移量，层内相对位置与支撑关系保持不变；
+            平移量被限制在当前规划边界内，保证居中后仍然合法。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.ApplyPendingUtilizationOrders">
+            <summary>
+            仅为利用率规划应用同 TypeId 替换箱的末尾序号。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.GenerateCandidates(StackPlanner.Core.Box,System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.PlacedBox})">
+            <summary>
+            生成一个箱子的候选位置，并按固定规则排序后截断为 MaxCandidatesPerBox 个。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.FindLayerFillSlot(StackPlanner.Core.Box,System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.PlacedBox},System.Int32,System.Double)">
+            <summary>
+            在目标层与目标箱底高度上，按"先低 Y、再低 X"选择第一个合法位置。
+            不受候选截断与支撑面积排序影响，使同型箱沿规则网格紧密排列，避免错位点碎化剩余空位。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.GenerateAllCandidates(StackPlanner.Core.Box,System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.PlacedBox})">
+            <summary>
+            生成一个箱子的全部合法候选位置（不截断），并按固定规则排序。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.CandidateHeights(System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.PlacedBox})">
+            <summary>
+            返回允许尝试的箱底高度：托盘底面和所有已有箱子的顶部。
+            这样候选箱只能落在托盘或同高支撑面上，不会产生悬空位置。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.HasStableSupport(StackPlanner.Core.StackPlanner.Candidate,System.Collections.Generic.IReadOnlyList{StackPlanner.Core.StackPlanner.PlacedBox})">
+            <summary>
+            判断箱子重心是否落在至少一个实际支撑箱的重叠区域内。
+            仅有边角或边缘交集虽然满足几何不碰撞，但在物理仿真中会产生倾倒。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.ToPlacedBox(StackPlanner.Core.Box,StackPlanner.Core.BoxPlacement,System.Boolean)">
+            <summary>
+            将公开的机械 Z 坐标反算为内部箱底高度 BaseZ，供边界、碰撞和支撑计算使用。
+            </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlanner.FindBox(System.String)">
+            <summary>按唯一箱号查找内部箱子对象。</summary>
+        </member>
         <member name="T:StackPlanner.Core.StackPlannerLogger">
             <summary>
             Core 内部日志器：支持内存环形缓冲与可选文件落盘。
             </summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlannerLogger.Configure(StackPlanner.Core.PlannerLogOptions)">
+            <summary>应用新的日志配置并裁剪缓存容量。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlannerLogger.Clear">
+            <summary>清空内存中的日志缓存。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlannerLogger.GetRecent(System.Int32)">
+            <summary>按时间升序返回最近 maxCount 条日志副本。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlannerLogger.Log(StackPlanner.Core.PlannerLogLevel,System.String,System.String,System.String,System.String)">
+            <summary>写入一条日志到内存缓存，并按配置可选落盘。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlannerLogger.NormalizeOptions(StackPlanner.Core.PlannerLogOptions)">
+            <summary>规范化日志配置，填充默认值。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlannerLogger.CloneOptions(StackPlanner.Core.PlannerLogOptions)">
+            <summary>复制日志配置对象。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlannerLogger.CloneEntry(StackPlanner.Core.PlannerLogEntry)">
+            <summary>复制日志条目对象。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlannerLogger.TrimEntriesUnsafe(System.Int32)">
+            <summary>在持锁上下文中按上限裁剪缓存。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlannerLogger.TryAppendToFile(System.String,StackPlanner.Core.PlannerLogEntry)">
+            <summary>尝试将日志追加写入文件，失败时静默忽略。</summary>
+        </member>
+        <member name="M:StackPlanner.Core.StackPlannerLogger.FormatEntry(StackPlanner.Core.PlannerLogEntry)">
+            <summary>格式化单条日志为文本行。</summary>
         </member>
     </members>
 </doc>

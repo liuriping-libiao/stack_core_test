@@ -9,7 +9,14 @@ namespace CoreDllFunctionTester;
 
 public sealed class MainForm : Form
 {
+    private const double DefaultPalletXMinMm = 1400;
+    private const double DefaultPalletXMaxMm = 2500;
+    private const double DefaultPalletYMinMm = -1000;
+    private const double DefaultPalletYMaxMm = 0;
+
     private readonly StackPlanner.Core.StackPlanner _planner = new();
+    private PalletCornerPoint[]? _palletCorners;
+    private BoxPlacementRelocator.PalletFrame? _palletFrame;
     private readonly string _succeededSnapshotPath = ResolveSucceededSnapshotPath();
     private readonly string _coreLogFilePath = ResolveCoreLogFilePath();
     private readonly TextBox _jsonPathTextBox = new() { Dock = DockStyle.Fill };
@@ -248,24 +255,30 @@ public sealed class MainForm : Form
 
         try
         {
+            var detailsBefore = _planner.GetPlannerBoxDetailsV2();
+            bool hasSucceeded = detailsBefore.Boxes.Any(x => x.Status == BoxStatus.StackingSucceeded);
+            if (!hasSucceeded)
+                _planner.ClearUtilizationPlanResult();
+
             var corners = dialog.GetCorners();
-            _planner.SetPalletDimensionsByCorners(corners[0], corners[1], corners[2], corners[3]);
+            var frame = BoxPlacementRelocator.BuildFrame(corners);
+            _planner.SetPalletDimensions(frame.LengthMm, frame.WidthMm, frame.FloorZMm);
+            _palletCorners = corners;
+            _palletFrame = frame;
 
             _summaryLabel.Text =
-                $"托盘尺寸设置成功 | X:[{_planner.PalletXMin:F2},{_planner.PalletXMax:F2}] Y:[{_planner.PalletYMin:F2},{_planner.PalletYMax:F2}] PlaceFloorZ:{_planner.PlaceFloorZ:F2} Tilt:{_planner.PalletTiltDeg:F2}°";
-            _statusResultLabel.Text = "SetPalletDimensionsByCorners: 成功";
+                $"托盘尺寸设置成功 | L:{frame.LengthMm:F2} W:{frame.WidthMm:F2} Center:({frame.CenterXmm:F2},{frame.CenterYmm:F2}) PlaceFloorZ:{frame.FloorZMm:F2} Yaw:{frame.YawDeg:F2}°";
+            _statusResultLabel.Text = "SetPalletDimensions(Length,Width): 成功";
             _rawJsonTextBox.Text = JsonSerializer.Serialize(new
             {
-                Operation = "SetPalletDimensionsByCorners",
+                Operation = "SetPalletDimensionsBySize",
                 Corners = corners,
-                PalletBounds = new
+                Frame = frame,
+                PalletSize = new
                 {
-                    _planner.PalletXMin,
-                    _planner.PalletXMax,
-                    _planner.PalletYMin,
-                    _planner.PalletYMax,
+                    frame.LengthMm,
+                    frame.WidthMm,
                     _planner.PlaceFloorZ,
-                    _planner.PalletTiltDeg,
                 },
             }, new JsonSerializerOptions
             {
@@ -282,13 +295,21 @@ public sealed class MainForm : Form
 
     private PalletCornerPoint[] BuildCurrentPalletCorners()
     {
+        if (_palletCorners is { Length: 4 })
+            return _palletCorners.Select(corner => new PalletCornerPoint
+            {
+                Xmm = corner.Xmm,
+                Ymm = corner.Ymm,
+                Zmm = corner.Zmm,
+            }).ToArray();
+
         double z = _planner.PlaceFloorZ;
         return
         [
-            new PalletCornerPoint { Xmm = _planner.PalletXMin, Ymm = _planner.PalletYMin, Zmm = z },
-            new PalletCornerPoint { Xmm = _planner.PalletXMax, Ymm = _planner.PalletYMin, Zmm = z },
-            new PalletCornerPoint { Xmm = _planner.PalletXMax, Ymm = _planner.PalletYMax, Zmm = z },
-            new PalletCornerPoint { Xmm = _planner.PalletXMin, Ymm = _planner.PalletYMax, Zmm = z },
+            new PalletCornerPoint { Xmm = DefaultPalletXMinMm, Ymm = DefaultPalletYMinMm, Zmm = z },
+            new PalletCornerPoint { Xmm = DefaultPalletXMaxMm, Ymm = DefaultPalletYMinMm, Zmm = z },
+            new PalletCornerPoint { Xmm = DefaultPalletXMaxMm, Ymm = DefaultPalletYMaxMm, Zmm = z },
+            new PalletCornerPoint { Xmm = DefaultPalletXMinMm, Ymm = DefaultPalletYMaxMm, Zmm = z },
         ];
     }
 
@@ -444,7 +465,10 @@ public sealed class MainForm : Form
             return;
         }
 
-        var adapter = new CoreSimulationAdapter(_planner);
+        var adapter = new CoreSimulationAdapter(
+            _planner,
+            () => BuildRelocatedPlan(_planner.CurrentPlan),
+            () => GetEffectivePalletFrame());
         var options = new SimulationOptions();
         var backend = new KinematicReplayBackend(options);
         _simulationForm = new SimulationForm(adapter, adapter, backend, options) { Owner = this };
@@ -556,7 +580,6 @@ public sealed class MainForm : Form
             _summaryLabel.Text =
                 $"从本地文件恢复成功堆{status} | {result.Message} | 恢复记录: {records.Count} | 已规划箱数: {details.PlannedBoxes}/{details.TotalBoxes}";
             _statusResultLabel.Text = $"UpsertSucceededPlacements(file): {result.Message}";
-
             _rawJsonTextBox.Text = JsonSerializer.Serialize(new
             {
                 Operation = "UpsertSucceededPlacementsFromFile",
@@ -1190,5 +1213,28 @@ public sealed class MainForm : Form
         public double Height { get; set; }
         public double Depth { get; set; }
         public double Weight { get; set; }
+    }
+
+    private StackPlanResult BuildRelocatedPlan(StackPlanResult relativePlan)
+    {
+        var frame = GetEffectivePalletFrame();
+
+        return new StackPlanResult
+        {
+            PlanningResult = relativePlan.PlanningResult,
+            Placements = relativePlan.Placements
+                .Select(placement => BoxPlacementRelocator.RelocateToWorld(placement, frame))
+                .ToArray(),
+        };
+    }
+
+    private BoxPlacementRelocator.PalletFrame GetEffectivePalletFrame()
+    {
+        if (_palletFrame is { } frame)
+            return frame;
+
+        var defaultFrame = BoxPlacementRelocator.BuildFrame(BuildCurrentPalletCorners());
+        _palletFrame = defaultFrame;
+        return defaultFrame;
     }
 }

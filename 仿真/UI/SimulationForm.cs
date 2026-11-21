@@ -169,7 +169,12 @@ public sealed class SimulationForm : Form
         _grid.Columns.Add(CreateColumn("宽(mm)", "Width"));
         _grid.Columns.Add(CreateColumn("高(mm)", "Height"));
         _grid.Columns.Add(CreateColumn("重量(kg)", "Weight"));
-        _grid.Columns.Add(CreateColumn("朝向", "Orientation"));
+        _grid.Columns.Add(CreateColumn("原始X(mm)", "OriginalX"));
+        _grid.Columns.Add(CreateColumn("原始Y(mm)", "OriginalY"));
+        _grid.Columns.Add(CreateColumn("原始角度(°)", "OriginalOrientation"));
+        _grid.Columns.Add(CreateColumn("重定位X(mm)", "RelocatedX"));
+        _grid.Columns.Add(CreateColumn("重定位Y(mm)", "RelocatedY"));
+        _grid.Columns.Add(CreateColumn("重定位角度(°)", "RelocatedOrientation"));
         _grid.Columns.Add(CreateColumn("层号", "Layer"));
         _grid.Columns.Add(CreateColumn("行号", "Row"));
         _grid.Columns.Add(CreateColumn("列号", "Column"));
@@ -228,6 +233,11 @@ public sealed class SimulationForm : Form
                 box.WidthMm,
                 box.HeightMm,
                 box.WeightKg,
+                box.OriginalXMm.ToString("F2"),
+                box.OriginalYMm.ToString("F2"),
+                box.OriginalOrientationDeg,
+                box.XMm.ToString("F2"),
+                box.YMm.ToString("F2"),
                 box.OrientationDeg,
                 box.LayerIndex,
                 box.RowIndex,
